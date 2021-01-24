@@ -724,7 +724,6 @@ static int uart_digi_ns16550_irq_rx_ready(const struct device *dev)
  */
 static void uart_digi_ns16550_irq_err_enable(const struct device *dev)
 {
-	riscv_plic_irq_enable(1);   /* XXX FIXME This likely goes elsewhere */
 	k_spinlock_key_t key = k_spin_lock(&DEV_DATA(dev)->lock);
 
 	OUTBYTE(IER(dev), INBYTE(IER(dev)) | IER_LSR);
@@ -743,7 +742,6 @@ static void uart_digi_ns16550_irq_err_disable(const struct device *dev)
 {
 	k_spinlock_key_t key = k_spin_lock(&DEV_DATA(dev)->lock);
 
-	riscv_plic_irq_disable(1);  /* XXX FIXME  This likely goes elsewhere. */
 	OUTBYTE(IER(dev), INBYTE(IER(dev)) & (~IER_LSR));
 
 	k_spin_unlock(&DEV_DATA(dev)->lock, key);
