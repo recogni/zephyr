@@ -67,7 +67,7 @@
             #interrupt-cells = <2>;
             compatible = "sifive,plic-1.0.0", "riscv,plic0-priority";
             interrupt-controller;
-            // interrupts-extended = <&hlic 11 &hlic 9>;
+            interrupts-extended = <&hlic 11>;
             /*
              *  The first reg is the address of the PLIC_PRIO register, the 
              *  second entry being the length of said register.
