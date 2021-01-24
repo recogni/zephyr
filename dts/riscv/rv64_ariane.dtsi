@@ -70,7 +70,7 @@
             // interrupts-extended = <&hlic 11 &hlic 9>;
             /*
              *  The first reg is the address of the PLIC_PRIO register, the 
-             *  sencond entry being the length of said register.
+             *  second entry being the length of said register.
              *  The next line is the IRQ_ENABLE offset followed by the context
              *  length. Finally followed by the claim register and the rest of
              *  the space.
