@@ -152,6 +152,11 @@ struct net_local_lr
     u32 last_mdio_gpio;
     u32 spurious; /* Count packets we took in but did not process */
     int irq;
+	struct net_if *iface;
+	uint8_t mac[6];
+	uint8_t txb[NET_ETH_MTU];
+	uint8_t rxb[NET_ETH_MTU];
+
 };
 
 #endif  // _ETH_HEADER_H_
