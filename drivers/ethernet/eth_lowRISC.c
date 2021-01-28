@@ -7,39 +7,103 @@
 
 #define DT_DRV_COMPAT lowrisc_eth
 
-#include <sys/types.h>
+
 #include <zephyr.h>
+#include <device.h>
+#include <string.h>
+#include <errno.h>
+#include <drivers/gpio.h>
+#include <drivers/spi.h>
+#include <net/net_pkt.h>
+#include <net/net_if.h>
 #include <net/ethernet.h>
 #include <ethernet/eth_stats.h>
-#include <drivers/pcie/pcie.h>
 #include "eth_lowRISC.h"
 
-struct lowrisc_dev {
-	struct net_if *iface;
-	uint8_t mac[6];
-	uint8_t txb[NET_ETH_MTU];
-	uint8_t rxb[NET_ETH_MTU];
-};
+/******************************************************************************/
 
-
-static int lr_tx(struct lowrisc_dev *dev, void *buf, size_t len)
+static void inline eth_write(struct net_local_lr *priv, size_t addr, int data)
 {
-        return 0;
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    eth_base[addr >> 3] = data;
 }
 
-static int lr_send(const struct device *device, struct net_pkt *pkt)
+static volatile inline int eth_read(struct net_local_lr *priv, size_t addr)
 {
-        return 0;
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    return eth_base[addr >> 3];
 }
 
-static void lr_isr(const struct device *device)
+
+//static int lr_tx(struct net_local_lr *dev, void *buf, size_t len)
+//{
+//        return 0;
+//}
+
+static void inline eth_copyout(struct net_local_lr *priv, u8 *data, int len)
 {
-        return;
+    int i, rnd = ((len - 1) | 7) + 1;
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    if (!(((size_t)data) & 7))
+    {
+        u64 *ptr = (u64 *)data;
+        for (i = 0; i < rnd / 8; i++) eth_base[TXBUFF_OFFSET / 8 + i] = ptr[i];
+    }
+    else  // We can't unfortunately rely on the skb being word aligned
+    {
+        u64 notptr;
+        for (i = 0; i < rnd / 8; i++)
+        {
+            memcpy(&notptr, data + (i << 3), sizeof(u64));
+            eth_base[TXBUFF_OFFSET / 8 + i] = notptr;
+        }
+    }
 }
 
-//DEVICE_DT_INST_DECLARE(0);
 
-int lr_probe(const struct device *device)
+static int lr_send(const struct device *dev, struct net_pkt *pkt)
+{
+   struct net_local_lr *priv  = dev->data;
+
+   int rslt = eth_read(priv, TPLR_OFFSET);
+   size_t len = net_pkt_get_len(pkt);
+
+   if (rslt & TPLR_BUSY_MASK)
+   {
+	  printk("TX Busy Status = %x, len = %lu, ignoring\n", rslt, len);
+   }
+
+   eth_copyout(priv, priv->txb, len);
+   eth_write(priv, TPLR_OFFSET, len);
+   return 0;
+}
+
+static void inline eth_enable_irq(struct net_local_lr *priv)
+{
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+
+    /*
+     * Hackery: Enable Promiscious mode for until we figure out how to recieve
+     * multicast packets addressed to PTP Multicast Group Addr 01:1b:19:00:00:00
+     */
+    eth_base[MACHI_OFFSET >> 3] |= (MACHI_IRQ_EN | MACHI_ALLPKTS_MASK);
+    mmiowb();
+}
+
+static void inline eth_disable_irq(struct net_local_lr *priv)
+{
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    eth_base[MACHI_OFFSET >> 3] &= ~MACHI_IRQ_EN;
+    mmiowb();
+}
+
+
+//static void lr_isr(struct device *dev)
+//{
+//        return;
+//}
+
+int lr_probe(const struct device *dev)
 {
         return 0;
 }
@@ -61,7 +125,7 @@ static const struct ethernet_api lr_api = {
         .send                   = lr_send,
 };
 
-static struct lowrisc_dev lr_dev;
+static struct net_local_lr lr_dev;
 
 
 ETH_NET_DEVICE_DT_INST_DEFINE(0,
