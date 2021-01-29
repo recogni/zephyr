@@ -82,9 +82,17 @@
             riscv,max-priority = <7>;
             riscv,ndev = <31>;
         };
-
+        eth: lowrisc-eth@30000000 {
+            compatible = "lowrisc-eth";
+            device_type = "network";
+            interrupt-parent = <&plic0>;
+            interrupts = <3 0>;
+            local-mac-address = [00 18 3e 02 e3 7f]; // This needs to change if more than one GenesysII on a VLAN
+            reg = <0x30000000 0x8000>;
+            label = "lowrisc";
+       };
         // TODO: How is this verified?
-        debug-controller@0 {
+       debug-controller@0 {
             compatible = "riscv,debug-013";
             interrupts-extended = <&hlic 65535>;
             reg = <0x0 0x1000>;
@@ -110,15 +118,6 @@
             reg-names = "control";
         };
         
-        eth: lowrisc-eth@30000000 {
-            compatible = "lowrisc-eth";
-            device_type = "network";
-            interrupt-parent = <&plic0>;
-            interrupts = <3 0>;
-            local-mac-address = [00 18 3e 02 e3 7f]; // This needs to change if more than one GenesysII on a VLAN
-            reg = <0x30000000 0x8000>;
-            label = "lowrisc";
-       };
 
         xlnx_gpio0: gpio@40000000 {
             #gpio-cells = <2>;

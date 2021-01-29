@@ -94,10 +94,10 @@ static void inline eth_disable_irq(struct net_local_lr *priv)
 }
 
 // TBD
-//static void lr_isr(struct device *dev)
-//{
-//        return;
-//}
+static void lr_isr(struct device *dev)
+{
+        return;
+}
 
 /*
  *  Update the device mac address. The input address is a array of 6 hex bytes.
@@ -146,9 +146,9 @@ int lr_probe(const struct device *dev)
     *  is gated by the check for buffer full which is true if
     *  `Next` == (`First` + `Last`) & 0xF.
     */
-//   int rsr = eth_read(priv, RSR_OFFSET);
-//   const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
-//   assert(next == 0);
+   int rsr = eth_read(priv, RSR_OFFSET);
+   const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
+   assert(next == 0);
    const int first = 0;
    const int last = 8;
    eth_write(priv, LR_WR_FIRST_BUFFER_PTR, first);
@@ -178,11 +178,11 @@ static void lr_iface_init(struct net_if *iface)
     */
     if (dev->iface == NULL) {
        dev->iface = iface;
-       /* Do the phy link up only once */
-//       IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
-//			lr_isr, DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
-//
-//		irq_enable(DT_INST_IRQN(0));
+//       /* Do the phy link up only once */
+       IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
+			lr_isr, NULL, DT_INST_IRQ(0, sense));
+
+		irq_enable(DT_INST_IRQN(0));
 	}
 
     ethernet_init(iface);
