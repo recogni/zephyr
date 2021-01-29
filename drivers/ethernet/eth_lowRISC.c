@@ -103,14 +103,72 @@ static void inline eth_disable_irq(struct net_local_lr *priv)
 //        return;
 //}
 
+/*
+ *  Update the device mac address. The input address is a array of 6 hex bytes.
+ */
+static void inline eth_update_address(struct net_local_lr *priv, u8 *mac)
+{
+    u32 macaddr_lo, macaddr_hi;
+    u32 flags = 0;
+    memcpy(&macaddr_lo, mac + 2, sizeof(u32));
+    memcpy(&macaddr_hi, mac + 0, sizeof(u16));
+    eth_write(priv, MACLO_OFFSET, htonl(macaddr_lo));
+    eth_write(priv, MACHI_OFFSET, flags | htons(macaddr_hi));
+}
+
+
 int lr_probe(const struct device *dev)
 {
-        return 0;
+   struct net_local_lr *priv = dev->data;
+
+   uint8_t mac_addr[6] = DT_INST_PROP(0, local_mac_address);
+
+   eth_update_address(priv, mac_addr);
+
+   priv->ioaddr = (void *) 0x30000000;
+//
+//   /*
+//    *  MDIO config
+//    */
+//   mdiobb_write(priv, 0, MII_BMCR,
+//                BMCR_RESET | BMCR_ANRESTART | BMCR_SPEED100);
+//
+
+   /*
+    *  RX buffer starting condition:
+    *      First : 0 (or `next` which is set to 0 on reset)
+    *      Last  : The size of the rotational buffer (s/w set, static)
+    *      Next  : (HW managed) should be 0
+    *
+    *  This will allow the hardware to realize that the buffer is empty and has
+    *  8 slots available.
+    *
+    *  The interrupt is only fired when the `Next` buffer (hardware managed)
+    *  does not match the `First` buffer (got a packet or two...).
+    *
+    *  Additionally, the condtition for getting a new packet (buffer has space)
+    *  is gated by the check for buffer full which is true if
+    *  `Next` == (`First` + `Last`) & 0xF.
+    */
+   // int rsr = eth_read(priv, RSR_OFFSET);
+   // const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
+   // assert(next == 0);
+   const int first = 0;
+   const int last = 8;
+   eth_write(priv, LR_WR_FIRST_BUFFER_PTR, first);
+   eth_write(priv, LR_WR_LAST_BUFFER_PTR, last);
+
+   /*
+    *  Enable IRQs for the eth driver. On the first go, we blindly bump the
+    *  rx slot to get the interrupts going.
+    */
+   eth_enable_irq(priv);
+   return 0;
 }
 
 static enum ethernet_hw_caps lr_caps(const struct device *dev)
 {
-        return ETHERNET_LINK_1000BASE_T;
+   return ETHERNET_LINK_10BASE_T | ETHERNET_LINK_100BASE_T | ETHERNET_LINK_1000BASE_T;
 }
 
 
@@ -130,7 +188,7 @@ static struct net_local_lr lr_dev;
 
 ETH_NET_DEVICE_DT_INST_DEFINE(0,
                     lr_probe,
-                    NULL,
+                    device_pm_control_nop,
                     &lr_dev,
                     NULL,
                     CONFIG_ETH_INIT_PRIORITY,

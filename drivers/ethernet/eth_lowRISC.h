@@ -142,10 +142,9 @@ typedef uhuge u64;
 struct net_local_lr
 {
     void __iomem *ioaddr;
-    struct net_device *ndev;
     u32 msg_enable;
 
-    struct phy_device *phy_dev;
+//    struct phy_device *phy_dev;
     int last_duplex;
     int last_carrier;
 
