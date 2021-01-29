@@ -18,6 +18,7 @@
 #include <net/net_if.h>
 #include <net/ethernet.h>
 #include <ethernet/eth_stats.h>
+#include <assert.h>
 #include "eth_lowRISC.h"
 
 /******************************************************************************/
@@ -34,11 +35,6 @@ static volatile inline int eth_read(struct net_local_lr *priv, size_t addr)
     return eth_base[addr >> 3];
 }
 
-
-//static int lr_tx(struct net_local_lr *dev, void *buf, size_t len)
-//{
-//        return 0;
-//}
 
 static void inline eth_copyout(struct net_local_lr *priv, u8 *data, int len)
 {
@@ -97,7 +93,7 @@ static void inline eth_disable_irq(struct net_local_lr *priv)
     mmiowb();
 }
 
-
+// TBD
 //static void lr_isr(struct device *dev)
 //{
 //        return;
@@ -150,9 +146,9 @@ int lr_probe(const struct device *dev)
     *  is gated by the check for buffer full which is true if
     *  `Next` == (`First` + `Last`) & 0xF.
     */
-   // int rsr = eth_read(priv, RSR_OFFSET);
-   // const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
-   // assert(next == 0);
+//   int rsr = eth_read(priv, RSR_OFFSET);
+//   const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
+//   assert(next == 0);
    const int first = 0;
    const int last = 8;
    eth_write(priv, LR_WR_FIRST_BUFFER_PTR, first);
@@ -174,7 +170,24 @@ static enum ethernet_hw_caps lr_caps(const struct device *dev)
 
 static void lr_iface_init(struct net_if *iface)
 {
-        return;
+   struct net_local_lr *dev = net_if_get_device(iface)->data;
+
+   /* For VLAN, this value is only used to get the correct L2 driver.
+    * The iface pointer in device context should contain the main
+    * interface if the VLANs are enabled.
+    */
+    if (dev->iface == NULL) {
+       dev->iface = iface;
+       /* Do the phy link up only once */
+//       IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
+//			lr_isr, DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
+//
+//		irq_enable(DT_INST_IRQN(0));
+	}
+
+    ethernet_init(iface);
+    net_if_set_link_addr(iface, dev->mac, sizeof(dev->mac), NET_LINK_ETHERNET);
+    return;
 }
 
 static const struct ethernet_api lr_api = {
