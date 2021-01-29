@@ -119,8 +119,8 @@ int lr_probe(const struct device *dev)
 
    uint8_t mac_addr[6] = DT_INST_PROP(0, local_mac_address);
 
+   memcpy(priv->mac, mac_addr, sizeof(mac_addr));
    eth_update_address(priv, mac_addr);
-
    priv->ioaddr = (void *) 0x30000000;
 //
 //   /*
