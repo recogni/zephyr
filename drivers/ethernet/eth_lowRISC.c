@@ -20,21 +20,11 @@
 #include <ethernet/eth_stats.h>
 #include <assert.h>
 #include "eth_lowRISC.h"
+#include "mdiobb.h"
+#include "rtl8211_phy.h"
+
 
 /******************************************************************************/
-
-static void inline eth_write(struct net_local_lr *priv, size_t addr, int data)
-{
-    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
-    eth_base[addr >> 3] = data;
-}
-
-static volatile inline int eth_read(struct net_local_lr *priv, size_t addr)
-{
-    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
-    return eth_base[addr >> 3];
-}
-
 
 static void inline eth_copyout(struct net_local_lr *priv, u8 *data, int len)
 {
@@ -126,9 +116,9 @@ int lr_probe(const struct device *dev)
 //   /*
 //    *  MDIO config
 //    */
-//   mdiobb_write(priv, 0, MII_BMCR,
-//                BMCR_RESET | BMCR_ANRESTART | BMCR_SPEED100);
-//
+   mdiobb_write(priv, 0, MII_BMCR,
+                BMCR_RESET | BMCR_ANRESTART | BMCR_SPEED100);
+
 
    /*
     *  RX buffer starting condition:
@@ -164,7 +154,7 @@ int lr_probe(const struct device *dev)
 
 static enum ethernet_hw_caps lr_caps(const struct device *dev)
 {
-   return ETHERNET_LINK_10BASE_T | ETHERNET_LINK_100BASE_T | ETHERNET_LINK_1000BASE_T;
+   return ETHERNET_LINK_10BASE_T ;
 }
 
 
@@ -180,7 +170,7 @@ static void lr_iface_init(struct net_if *iface)
        dev->iface = iface;
 //       /* Do the phy link up only once */
        IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
-			lr_isr, NULL, DT_INST_IRQ(0, sense));
+			lr_isr,  DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
 
 		irq_enable(DT_INST_IRQN(0));
 	}

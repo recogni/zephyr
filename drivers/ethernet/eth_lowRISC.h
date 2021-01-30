@@ -158,4 +158,17 @@ struct net_local_lr
 
 };
 
+static void inline eth_write(struct net_local_lr *priv, size_t addr, int data)
+{
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    eth_base[addr >> 3] = data;
+}
+
+static volatile inline int eth_read(struct net_local_lr *priv, size_t addr)
+{
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    return eth_base[addr >> 3];
+}
+
+
 #endif  // _ETH_HEADER_H_
