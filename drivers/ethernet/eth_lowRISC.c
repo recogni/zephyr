@@ -158,6 +158,8 @@ static enum ethernet_hw_caps lr_caps(const struct device *dev)
 }
 
 
+DEVICE_DT_INST_DECLARE(0);
+
 static void lr_iface_init(struct net_if *iface)
 {
    struct net_local_lr *dev = net_if_get_device(iface)->data;
@@ -168,7 +170,7 @@ static void lr_iface_init(struct net_if *iface)
     */
     if (dev->iface == NULL) {
        dev->iface = iface;
-//       /* Do the phy link up only once */
+
        IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
 			lr_isr,  DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
 
@@ -197,4 +199,3 @@ ETH_NET_DEVICE_DT_INST_DEFINE(0,
                     CONFIG_ETH_INIT_PRIORITY,
                     &lr_api,
                     NET_ETH_MTU);
-
