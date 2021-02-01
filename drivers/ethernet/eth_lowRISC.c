@@ -206,7 +206,7 @@ static void lr_isr(struct device *dev)
    uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
 
    if ((n = lr_eth_recv_size(priv)) > 0)
-    {
+   {
 
 		pkt = net_pkt_rx_alloc_with_buffer(priv->iface, n, AF_UNSPEC, 0,
 						   K_NO_WAIT);
@@ -323,14 +323,10 @@ static void lr_iface_init(struct net_if *iface)
     */
     if (dev->iface == NULL) {
        dev->iface = iface;
-
-       IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
-			lr_isr,  DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
-
-		irq_enable(DT_INST_IRQN(0));
-        eth_enable_irq(dev);
-
-	}
+       IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority), lr_isr,  DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
+       irq_enable(DT_INST_IRQN(0));
+       eth_enable_irq(dev);
+    }
 
     ethernet_init(iface);
     net_if_set_link_addr(iface, dev->mac, sizeof(dev->mac), NET_LINK_ETHERNET);
