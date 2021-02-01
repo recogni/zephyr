@@ -5,9 +5,14 @@
  * LowRISC Ethernet driver
  */
 
+
 #define DT_DRV_COMPAT lowrisc_eth
 
-
+#define LOG_MODULE_NAME eth_lowRISC
+#define LOG_LEVEL CONFIG_ETHERNET_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+#include <sys/types.h>
 #include <zephyr.h>
 #include <device.h>
 #include <string.h>
@@ -24,7 +29,19 @@
 #include "rtl8211_phy.h"
 
 
-/******************************************************************************/
+#if defined(CONFIG_ETH_LOWRISC_VERBOSE_DEBUG)
+#define hexdump(_buf, _len, fmt, args...)				\
+({									\
+	const size_t STR_SIZE = 80;					\
+	char _str[STR_SIZE];						\
+									\
+	snprintk(_str, STR_SIZE, "%s: " fmt, __func__, ## args);	\
+									\
+	LOG_HEXDUMP_DBG(_buf, _len, log_strdup(_str));			\
+})
+#else
+#define hexdump(args...)
+#endif
 
 static void inline eth_copyout(struct net_local_lr *priv, u8 *data, int len)
 {
@@ -83,10 +100,146 @@ static void inline eth_disable_irq(struct net_local_lr *priv)
     mmiowb();
 }
 
-// TBD
+/*
+ *  Fetch the rx size of the packet sitting in the `first` buffer.
+ */
+int lr_eth_recv_size(struct net_local_lr *priv)
+{
+    volatile const int rsr = eth_read(priv, RSR_OFFSET);
+    const int first = rsr & RSR_RECV_FIRST_MASK;
+//    const int next = (rsr & RSR_RECV_NEXT_MASK) >> 4;
+
+    // Check if there is Rx Data available ...
+    if (rsr & RSR_RECV_DONE_MASK)
+    {
+        // Read the rx length for the buffer slot we are processing. There are
+        // up-to 8 of these. TODO: Verify the << 3.
+        const int rx_len = eth_read(priv, RPLR_OFFSET + ((first & 0x7) << 3));
+        const int rlen = (rx_len & RPLR_LENGTH_MASK) - 4;  // Discard FCS bytes.
+        return rlen;
+    }
+    return 0;
+}
+
+static void inline eth_copyin(struct net_local_lr *priv, u8 *data, int len,
+                              int start)
+{
+    int i, rnd = ((len - 1) | 7) + 1;
+    volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
+    if (!(((size_t)data) & 7))
+    {
+        u64 *ptr = (u64 *)data;
+        for (i = 0; i < rnd / 8; i++) ptr[i] = eth_base[start + i];
+    }
+    else  // We can't unfortunately rely on the skb being word aligned
+    {
+        for (i = 0; i < rnd / 8; i++)
+        {
+            u64 notptr = eth_base[start + i];
+            memcpy(data + (i << 3), &notptr, sizeof(u64));
+        }
+    }
+}
+
+/*
+ *  Fetch `len` number of bytes from the current `first` buffer.
+ *
+ *  First, Last == pointers to indicate full or empty
+ *  Next  == buffer slot to read data into for the device (only increments)
+ *  Full (buffer slot)
+ */
+int lr_eth_recv(struct net_local_lr *priv, u8 *buf, const int len)
+{
+    assert(len > 0);
+
+    const int rsr = eth_read(priv, RSR_OFFSET);
+    const int first = rsr & RSR_RECV_FIRST_MASK;
+//    const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
+
+    const int start = RXBUFF_OFFSET / 8 + ((first & 7) << 8);
+    eth_copyin(priv, buf, len, start);
+
+    /*
+     *  Advance first buffer by 1 slot (that we consumed above).
+     */
+    eth_write(priv, LR_WR_FIRST_BUFFER_PTR, (first + 1) & 0xF);
+    return len;
+}
+
+static struct net_if *get_iface(struct net_local_lr *ctx, uint16_t vlan_tag)
+{
+#if defined(CONFIG_NET_VLAN)
+	struct net_if *iface;
+
+	iface = net_eth_get_vlan_iface(ctx->iface, vlan_tag);
+	if (!iface) {
+		return ctx->iface;
+	}
+
+	return iface;
+#else
+	ARG_UNUSED(vlan_tag);
+
+	return ctx->iface;
+#endif
+}
+
+void lr_eth_enable_irq(struct net_local_lr *priv) { eth_enable_irq(priv); }
+void lr_eth_disable_irq(struct net_local_lr *priv) { eth_disable_irq(priv); }
+
+/*
+ *  Trigger an IRQ - this is done on driver startup and if the rx buffer is
+ *  empty and we did not fetch any packets.
+ */
+void lr_eth_trigger_irq(struct net_local_lr *priv)
+{
+    int rsr = eth_read(priv, RSR_OFFSET);
+    const int first = rsr & RSR_RECV_FIRST_MASK;
+    eth_write(priv, LR_WR_FIRST_BUFFER_PTR, (first + 1) & 0xF);
+}
+
 static void lr_isr(struct device *dev)
 {
-        return;
+   ssize_t n; // Bytes rx'd
+   struct net_local_lr *priv = dev->data;
+   struct net_pkt *pkt = NULL;
+   uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
+
+   if ((n = lr_eth_recv_size(priv)) > 0)
+    {
+
+		pkt = net_pkt_rx_alloc_with_buffer(priv->iface, n, AF_UNSPEC, 0,
+						   K_NO_WAIT);
+		if (!pkt) {
+			LOG_ERR("Out of buffers");
+			goto out;
+		}
+
+	   assert(lr_eth_recv(priv, priv->rxb, n) == n);
+
+	   hexdump(priv->rxb, n, "%zd byte(s)", n);
+
+		if (net_pkt_write(pkt, priv->rxb, n)) {
+			LOG_ERR("Out of memory for received frame");
+			net_pkt_unref(pkt);
+			pkt = NULL;
+		}
+		net_recv_data(get_iface(priv, vlan_tag), pkt);
+    }
+   else
+   {
+       /*
+        *  The read side was not full, re-enable IRQs.
+        */
+       lr_eth_trigger_irq(priv);
+   }
+
+out:
+   // The ISR handler disables the ethernet IRQs, since we are done, turn
+   // them back on to process the next potential packet.
+   lr_eth_enable_irq(priv);
+
+    return;
 }
 
 /*
@@ -154,7 +307,7 @@ int lr_probe(const struct device *dev)
 
 static enum ethernet_hw_caps lr_caps(const struct device *dev)
 {
-   return ETHERNET_LINK_10BASE_T ;
+   return ETHERNET_LINK_10BASE_T  | ETHERNET_LINK_100BASE_T;
 }
 
 
@@ -175,6 +328,8 @@ static void lr_iface_init(struct net_if *iface)
 			lr_isr,  DEVICE_DT_INST_GET(0), DT_INST_IRQ(0, sense));
 
 		irq_enable(DT_INST_IRQN(0));
+        eth_enable_irq(dev);
+
 	}
 
     ethernet_init(iface);
