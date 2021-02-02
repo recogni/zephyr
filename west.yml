@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: recogni
+      url-base: https://github.com/recogni
 
   #
   # Please add items below based on alphabetical order
@@ -42,7 +44,8 @@ manifest:
       groups:
         - tools
     - name: fatfs
-      revision: 94fcd6bfb3801ac0a5e12ea2f52187e0a688b90e
+      remote: recogni
+      revision: be10dd604d02df19b483ad9e9af54a2acc69c438
       path: modules/fs/fatfs
       groups:
         - fs
