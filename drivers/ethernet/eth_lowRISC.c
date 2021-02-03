@@ -71,6 +71,11 @@ static int lr_send(const struct device *dev, struct net_pkt *pkt)
    int rslt = eth_read(priv, TPLR_OFFSET);
    size_t len = net_pkt_get_len(pkt);
 
+   if (net_pkt_read(pkt, priv->txb, len))
+   {
+      return -EIO;
+   }
+
    if (rslt & TPLR_BUSY_MASK)
    {
 	  printk("TX Busy Status = %x, len = %lu, ignoring\n", rslt, len);
