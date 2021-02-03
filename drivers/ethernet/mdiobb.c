@@ -102,22 +102,6 @@ static void mdiobb_send_num(struct net_local_lr *priv, u16 val, int bits)
     }
 }
 
-/*
- *  MDIO must already be configured as input.
- */
-//static u16 mdiobb_get_num(struct net_local_lr *priv, int bits)
-//{
-//    int i;
-//    u16 ret = 0;
-//
-//    for (i = bits - 1; i >= 0; i--)
-//    {
-//        ret <<= 1;
-//        ret |= mdiobb_get_bit(priv);
-//    }
-//
-//    return ret;
-//}
 
 /*
  *  Utility to send the preamble, address, and register (common to read and

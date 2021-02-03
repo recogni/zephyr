@@ -97,8 +97,7 @@ static void inline eth_enable_irq(struct net_local_lr *priv)
     eth_base[MACHI_OFFSET >> 3] |= (MACHI_IRQ_EN | MACHI_ALLPKTS_MASK);
     mmiowb();
 }
-
-static void inline eth_disable_irq(struct net_local_lr *priv)
+    static void inline eth_disable_irq(struct net_local_lr *priv)
 {
     volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
     eth_base[MACHI_OFFSET >> 3] &= ~MACHI_IRQ_EN;
@@ -112,7 +111,7 @@ int lr_eth_recv_size(struct net_local_lr *priv)
 {
     volatile const int rsr = eth_read(priv, RSR_OFFSET);
     const int first = rsr & RSR_RECV_FIRST_MASK;
-//    const int next = (rsr & RSR_RECV_NEXT_MASK) >> 4;
+    //const int next = (rsr & RSR_RECV_NEXT_MASK) >> 4;
 
     // Check if there is Rx Data available ...
     if (rsr & RSR_RECV_DONE_MASK)
@@ -213,24 +212,24 @@ static void lr_isr(struct device *dev)
    if ((n = lr_eth_recv_size(priv)) > 0)
    {
 
-		pkt = net_pkt_rx_alloc_with_buffer(priv->iface, n, AF_UNSPEC, 0,
+	pkt = net_pkt_rx_alloc_with_buffer(priv->iface, n, AF_UNSPEC, 0,
 						   K_NO_WAIT);
-		if (!pkt) {
-			LOG_ERR("Out of buffers");
-			goto out;
-		}
+	if (!pkt) {
+	    LOG_ERR("Out of buffers");
+	    goto out;
+	}
 
-	   assert(lr_eth_recv(priv, priv->rxb, n) == n);
+        assert(lr_eth_recv(priv, priv->rxb, n) == n);
 
-	   hexdump(priv->rxb, n, "%zd byte(s)", n);
+        hexdump(priv->rxb, n, "%zd byte(s)", n);
 
-		if (net_pkt_write(pkt, priv->rxb, n)) {
-			LOG_ERR("Out of memory for received frame");
-			net_pkt_unref(pkt);
-			pkt = NULL;
-		}
-		net_recv_data(get_iface(priv, vlan_tag), pkt);
-    }
+	if (net_pkt_write(pkt, priv->rxb, n)) {
+        	LOG_ERR("Out of memory for received frame");
+		net_pkt_unref(pkt);
+		pkt = NULL;
+	}
+	net_recv_data(get_iface(priv, vlan_tag), pkt);
+   }
    else
    {
        /*
@@ -270,10 +269,10 @@ int lr_probe(const struct device *dev)
    memcpy(priv->mac, mac_addr, sizeof(mac_addr));
    eth_update_address(priv, mac_addr);
    priv->ioaddr = (void *) 0x30000000;
-//
-//   /*
-//    *  MDIO config
-//    */
+
+   /*
+    *  MDIO config
+    */
    mdiobb_write(priv, 0, MII_BMCR,
                 BMCR_RESET | BMCR_ANRESTART | BMCR_SPEED100);
 
