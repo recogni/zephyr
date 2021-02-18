@@ -911,6 +911,7 @@ int gptp_get_port_data(struct gptp_domain *domain,
 
 static void init_ports(void)
 {
+	NET_WARN("Initializing gPTP");
 	net_if_foreach(gptp_add_port, &gptp_domain.default_ds.nb_ports);
 
 	/* Only initialize the state machine once the ports are known. */

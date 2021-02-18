@@ -559,9 +559,11 @@ enum net_verdict net_conn_input(struct net_pkt *pkt,
 	 * UDP, TCP, IPv4 or IPv6. So that we can add new features with
 	 * less cross-module changes.
 	 */
-	NET_DBG("Check %s listener for pkt %p src port %u dst port %u"
-		" family %d", net_proto2str(net_pkt_family(pkt), proto), pkt,
-		ntohs(src_port), ntohs(dst_port), net_pkt_family(pkt));
+	if (ntohs(dst_port) != 1900) {
+		NET_DBG("Check %s listener for pkt %p src port %u dst port %u"
+			" family %d", net_proto2str(net_pkt_family(pkt), proto), pkt,
+			ntohs(src_port), ntohs(dst_port), net_pkt_family(pkt));
+	}
 
 	/* If we receive a packet with multicast destination address, we might
 	 * need to deliver the packet to multiple recipients.

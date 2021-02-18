@@ -506,7 +506,7 @@ void net_pkt_unref(struct net_pkt *pkt)
 
 	if (!pkt) {
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
-		NET_ERR("*** ERROR *** pkt %p (%s():%d)", pkt, caller, line);
+		//NET_ERR("*** ERROR *** pkt %p (%s():%d)", pkt, caller, line);
 #endif
 		return;
 	}
@@ -515,6 +515,7 @@ void net_pkt_unref(struct net_pkt *pkt)
 		ref = atomic_get(&pkt->atomic_ref);
 		if (!ref) {
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
+/* BRETT
 			const char *func_freed;
 			int line_freed;
 
@@ -527,6 +528,7 @@ void net_pkt_unref(struct net_pkt *pkt)
 				NET_ERR("*** ERROR *** pkt %p is freed already "
 					"(%s():%d)", pkt, caller, line);
 			}
+			*/
 #endif
 			return;
 		}
@@ -534,9 +536,11 @@ void net_pkt_unref(struct net_pkt *pkt)
 
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
 #if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+/* BRETT
 	NET_DBG("%s [%d] pkt %p ref %d frags %p (%s():%d)",
 		slab2str(pkt->slab), k_mem_slab_num_free_get(pkt->slab),
 		pkt, ref - 1, pkt->frags, caller, line);
+		*/
 #endif
 	if (ref > 1) {
 		goto done;
@@ -545,11 +549,13 @@ void net_pkt_unref(struct net_pkt *pkt)
 	frag = pkt->frags;
 	while (frag) {
 #if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+/* BRETT
 		NET_DBG("%s (%s) [%d] frag %p ref %d frags %p (%s():%d)",
 			pool2str(net_buf_pool_get(frag->pool_id)),
 			get_name(net_buf_pool_get(frag->pool_id)),
 			get_frees(net_buf_pool_get(frag->pool_id)), frag,
 			frag->ref - 1U, frag->frags, caller, line);
+			*/
 #endif
 
 		if (!frag->ref) {
@@ -615,9 +621,11 @@ struct net_pkt *net_pkt_ref(struct net_pkt *pkt)
 	} while (!atomic_cas(&pkt->atomic_ref, ref, ref + 1));
 
 #if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+/* BRETT
 	NET_DBG("%s [%d] pkt %p ref %d (%s():%d)",
 		slab2str(pkt->slab), k_mem_slab_num_free_get(pkt->slab),
 		pkt, ref + 1, caller, line);
+		**/
 #endif
 
 
@@ -638,7 +646,7 @@ struct net_buf *net_pkt_frag_ref(struct net_buf *frag)
 		return NULL;
 	}
 
-#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG && 0
 	NET_DBG("%s (%s) [%d] frag %p ref %d (%s():%d)",
 		pool2str(net_buf_pool_get(frag->pool_id)),
 		get_name(net_buf_pool_get(frag->pool_id)),
@@ -664,7 +672,7 @@ void net_pkt_frag_unref(struct net_buf *frag)
 		return;
 	}
 
-#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG && 0
 	NET_DBG("%s (%s) [%d] frag %p ref %d (%s():%d)",
 		pool2str(net_buf_pool_get(frag->pool_id)),
 		get_name(net_buf_pool_get(frag->pool_id)),
@@ -690,7 +698,7 @@ struct net_buf *net_pkt_frag_del(struct net_pkt *pkt,
 				 struct net_buf *frag)
 #endif
 {
-#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG
+#if CONFIG_NET_PKT_LOG_LEVEL >= LOG_LEVEL_DBG && 0
 	NET_DBG("pkt %p parent %p frag %p ref %u (%s:%d)",
 		pkt, parent, frag, frag->ref, caller, line);
 #endif

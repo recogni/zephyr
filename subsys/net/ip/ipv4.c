@@ -214,13 +214,13 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 
 	hdr = (struct net_ipv4_hdr *)net_pkt_get_data(pkt, &ipv4_access);
 	if (!hdr) {
-		NET_DBG("DROP: no buffer");
+		NET_WARN("DROP: no buffer");
 		goto drop;
 	}
 
 	hdr_len = (hdr->vhl & NET_IPV4_IHL_MASK) * 4U;
 	if (hdr_len < sizeof(struct net_ipv4_hdr)) {
-		NET_DBG("DROP: Invalid hdr length");
+		NET_WARN("DROP: Invalid hdr length");
 		goto drop;
 	}
 
@@ -235,7 +235,7 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 
 	pkt_len = ntohs(hdr->len);
 	if (real_len < pkt_len) {
-		NET_DBG("DROP: pkt len per hdr %d != pkt real len %d",
+		NET_WARN("DROP: pkt len per hdr %d != pkt real len %d",
 			pkt_len, real_len);
 		goto drop;
 	} else if (real_len > pkt_len) {
@@ -243,12 +243,12 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 	}
 
 	if (net_ipv4_is_addr_mcast(&hdr->src)) {
-		NET_DBG("DROP: src addr is %s", "mcast");
+		NET_WARN("DROP: src addr is %s", "mcast");
 		goto drop;
 	}
 
 	if (net_ipv4_is_addr_bcast(net_pkt_iface(pkt), &hdr->src)) {
-		NET_DBG("DROP: src addr is %s", "bcast");
+		NET_WARN("DROP: src addr is %s", "bcast");
 		goto drop;
 	}
 
@@ -259,7 +259,7 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 
 	if (net_if_need_calc_rx_checksum(net_pkt_iface(pkt)) &&
 	    net_calc_chksum_ipv4(pkt) != 0U) {
-		NET_DBG("DROP: invalid chksum");
+		NET_WARN("DROP: invalid chksum");
 		goto drop;
 	}
 
@@ -273,7 +273,7 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 				   net_ipv4_unspecified_address()))))) ||
 	    (hdr->proto == IPPROTO_TCP &&
 	     net_ipv4_is_addr_bcast(net_pkt_iface(pkt), &hdr->dst))) {
-		NET_DBG("DROP: not for me");
+		NET_WARN("DROP: not for me");
 		goto drop;
 	}
 
@@ -282,7 +282,7 @@ enum net_verdict net_ipv4_input(struct net_pkt *pkt)
 	if (opts_len) {
 		/* Only few options are handled in EchoRequest, rest skipped */
 		if (net_pkt_skip(pkt, opts_len)) {
-			NET_DBG("Header too big? %u", hdr_len);
+			NET_WARN("Header too big? %u", hdr_len);
 			goto drop;
 		}
 	}

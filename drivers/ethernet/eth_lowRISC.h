@@ -156,6 +156,13 @@ struct net_local_lr
     uint8_t txb[NET_ETH_MTU];
     uint8_t rxb[NET_ETH_MTU];
 
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+	struct net_ptp_time time;
+        const struct device *ptp_clock;
+        //enet_ptp_config_t ptp_config;
+#endif
+
+
 };
 
 static void inline eth_write(struct net_local_lr *priv, size_t addr, int data)

@@ -8,6 +8,8 @@
 
 #define DT_DRV_COMPAT lowrisc_eth
 
+#define CONFIG_PTP_CLOCK_LOWRISC 1
+
 #define LOG_MODULE_NAME eth_lowRISC
 #define LOG_LEVEL CONFIG_ETHERNET_LOG_LEVEL
 #include <logging/log.h>
@@ -28,6 +30,20 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include "mdiobb.h"
 #include "rtl8211_phy.h"
 
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+#include <ptp_clock.h>
+#include <net/gptp.h>
+#include <sys/util.h>
+#endif
+
+struct {
+	int ptp;
+	int rx_isr;
+	int prio;
+	int am_ptp;
+} eth_stats;
+
+static struct net_if *get_iface(struct net_local_lr *ctx, uint16_t vlan_tag);
 
 #if defined(CONFIG_ETH_LOWRISC_VERBOSE_DEBUG)
 #define hexdump(_buf, _len, fmt, args...)				\
@@ -63,13 +79,183 @@ static void inline eth_copyout(struct net_local_lr *priv, u8 *data, int len)
     }
 }
 
+#if defined(FROM_MCUX)
+static bool eth_get_ptp_data(struct net_if *iface, struct net_pkt *pkt)
+{
+        int eth_hlen;
+	if (ntohs(NET_ETH_HDR(pkt)->type) != NET_ETH_PTYPE_PTP) {
+		return false;
+	}
+	eth_hlen = sizeof(struct net_eth_hdr);
+        net_pkt_set_priority(pkt, NET_PRIORITY_CA);
+        return true;
+}
+#endif
+
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+static bool lr_need_timestamping(struct gptp_hdr *hdr)
+{
+        switch (hdr->message_type) {
+        case GPTP_SYNC_MESSAGE:
+        case GPTP_PATH_DELAY_RESP_MESSAGE:
+                return true;
+        default:
+                return false;
+        }
+}
+
+static struct gptp_hdr *lr_check_gptp_msg(struct net_pkt *pkt,
+                                       bool is_tx)
+{
+        uint8_t *msg_start = net_pkt_data(pkt);
+        struct gptp_hdr *gptp_hdr;
+        int eth_hlen;
+
+	struct net_eth_hdr *hdr;
+
+	hdr = (struct net_eth_hdr *)msg_start;
+	if (ntohs(hdr->type) != NET_ETH_PTYPE_PTP) {
+		return NULL;
+	}
+
+	eth_hlen = sizeof(struct net_eth_hdr);
+
+        /* In TX, the first net_buf contains the Ethernet header
+         * and the actual gPTP header is in the second net_buf.
+         * In RX, the Ethernet header + other headers are in the
+         * first net_buf.
+         */
+        if (is_tx) {
+                if (pkt->frags->frags == NULL) {
+                        return false;
+                }
+
+                gptp_hdr = (struct gptp_hdr *)pkt->frags->frags->data;
+        } else {
+                gptp_hdr = (struct gptp_hdr *)(pkt->frags->data + eth_hlen);
+        }
+
+        return gptp_hdr;
+}
+
+static int lr_eth_clock_gettime(struct net_ptp_time *time)
+{
+#ifdef NOTYET
+	struct timespec tp;
+	int ret;
+
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
+	if (ret < 0) {
+		return -errno;
+	}
+
+	time->second = tp.tv_sec;
+	time->nanosecond = tp.tv_nsec;
+#endif
+
+	return 0;
+}
+
+static void lr_update_pkt_priority(struct gptp_hdr *hdr, struct net_pkt *pkt)
+{
+        if (GPTP_IS_EVENT_MSG(hdr->message_type)) {
+                net_pkt_set_priority(pkt, NET_PRIORITY_CA);
+		eth_stats.prio++;
+        } else {
+                net_pkt_set_priority(pkt, NET_PRIORITY_IC);
+        }
+}
+
+#ifdef NOTUSED
+static void lr_update_gptp(struct net_if *iface, struct net_pkt *pkt,
+                        bool send)
+{
+        struct net_ptp_time timestamp;
+        struct gptp_hdr *hdr;
+        int ret;
+
+        ret = lr_eth_clock_gettime(&timestamp);
+        if (ret < 0) {
+                return;
+        }
+
+        net_pkt_set_timestamp(pkt, &timestamp);
+
+        //hdr = lr_check_gptp_msg(iface, pkt, send);
+        hdr = lr_check_gptp_msg(pkt, send);
+        if (!hdr) {
+                return;
+        }
+
+        if (send) {
+                ret = lr_need_timestamping(hdr);
+                if (ret) {
+                        net_if_add_tx_timestamp(pkt);
+                }
+        } else {
+                lr_update_pkt_priority(hdr, pkt);
+        }
+}
+#endif /* UNUSED */
+
+
+
+/* Retrieve timestamp (from hw if possible) and write timestamp into packet */
+static /* inline */ void lr_timestamp_tx_pkt(struct gptp_hdr *hdr, struct net_pkt *pkt)
+{
+        struct net_ptp_time timestamp;
+        //timestamp = get_current_ts(gmac);
+        net_pkt_set_timestamp(pkt, &timestamp);
+}
+
+/* Retrieve time (from hw if possible) and write it into packet */
+static inline void lr_timestamp_rx_pkt(struct gptp_hdr *hdr,
+                                    struct net_pkt *pkt)
+{
+        struct net_ptp_time timestamp;
+
+	/*
+	 From drivers/kscan/kscan_mchp_xec.c
+	 uint32_t stop_cycles = k_cycle_get_32();
+	 cycles_spent =  stop_cycles - start_cycles;
+         microsecs_spent = CLOCK_32K_HW_CYCLES_TO_US(cycles_spent);
+	 ***/
+
+        //timestamp = get_current_ts(gmac);
+	
+	//Call somekind of timeofday thing to get time.
+	//Number ticks?
+	//Brett
+
+        net_pkt_set_timestamp(pkt, &timestamp);
+}
+
+#endif
 
 static int lr_send(const struct device *dev, struct net_pkt *pkt)
 {
    struct net_local_lr *priv  = dev->data;
 
-   int rslt = eth_read(priv, TPLR_OFFSET);
-   size_t len = net_pkt_get_len(pkt);
+   int rslt;
+   size_t len;
+
+//#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+        struct gptp_hdr *hdr;
+
+	hdr = lr_check_gptp_msg(pkt, true);
+        if (hdr && lr_need_timestamping(hdr)) {
+		lr_timestamp_tx_pkt(hdr, pkt);
+	}
+	/***
+        if (hdr && lr_need_timestamping(hdr)) {
+                net_if_add_tx_timestamp(pkt);
+        }
+	****/
+
+//#endif
+
+   rslt = eth_read(priv, TPLR_OFFSET);
+   len = net_pkt_get_len(pkt);
 
    if (net_pkt_read(pkt, priv->txb, len))
    {
@@ -83,6 +269,7 @@ static int lr_send(const struct device *dev, struct net_pkt *pkt)
 
    eth_copyout(priv, priv->txb, len);
    eth_write(priv, TPLR_OFFSET, len);
+
    return 0;
 }
 
@@ -94,10 +281,11 @@ static void inline eth_enable_irq(struct net_local_lr *priv)
      * Hackery: Enable Promiscious mode for until we figure out how to recieve
      * multicast packets addressed to PTP Multicast Group Addr 01:1b:19:00:00:00
      */
-    eth_base[MACHI_OFFSET >> 3] |= (MACHI_IRQ_EN | MACHI_ALLPKTS_MASK);
+    eth_base[MACHI_OFFSET >> 3] |= (MACHI_IRQ_EN | MACHI_ALLPKTS_MASK);  //PROMISC
     mmiowb();
 }
-    static void inline eth_disable_irq(struct net_local_lr *priv)
+
+static void inline eth_disable_irq(struct net_local_lr *priv)
 {
     volatile u64 *eth_base = (volatile u64 *)(priv->ioaddr);
     eth_base[MACHI_OFFSET >> 3] &= ~MACHI_IRQ_EN;
@@ -152,21 +340,51 @@ static void inline eth_copyin(struct net_local_lr *priv, u8 *data, int len,
  *  Next  == buffer slot to read data into for the device (only increments)
  *  Full (buffer slot)
  */
-int lr_eth_recv(struct net_local_lr *priv, u8 *buf, const int len)
+int lr_eth_recv(struct net_local_lr *priv, u8 *buf, const int len, struct net_pkt *pkt)
 {
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+        struct gptp_hdr *hdr;
+#endif
+	uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
+
     assert(len > 0);
 
+eth_stats.am_ptp = 0;
+eth_stats.rx_isr++;
     const int rsr = eth_read(priv, RSR_OFFSET);
     const int first = rsr & RSR_RECV_FIRST_MASK;
-//    const int next = rsr & RSR_RECV_NEXT_MASK >> 4;
 
     const int start = RXBUFF_OFFSET / 8 + ((first & 7) << 8);
     eth_copyin(priv, buf, len, start);
+
 
     /*
      *  Advance first buffer by 1 slot (that we consumed above).
      */
     eth_write(priv, LR_WR_FIRST_BUFFER_PTR, (first + 1) & 0xF);
+
+#ifndef RELOCATED
+	/* Relocated from ISR */
+	if (net_pkt_write(pkt, priv->rxb, len)) {
+        	LOG_ERR("Out of memory for received frame");
+		net_pkt_unref(pkt);
+		pkt = NULL;
+		return -1;
+	}
+
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+	hdr = lr_check_gptp_msg(pkt, false);
+	if (hdr) {
+eth_stats.ptp++;
+eth_stats.am_ptp = 1;
+		lr_timestamp_rx_pkt(hdr, pkt);
+		lr_update_pkt_priority(hdr, pkt);
+	}
+#endif /* CONFIG_PTP_CLOCK_LOWRISC */
+
+	net_recv_data(get_iface(priv, vlan_tag), pkt);
+#endif /* RELOCATED from ISR */
+
     return len;
 }
 
@@ -207,7 +425,6 @@ static void lr_isr(struct device *dev)
    ssize_t n; // Bytes rx'd
    struct net_local_lr *priv = dev->data;
    struct net_pkt *pkt = NULL;
-   uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
 
    lr_eth_disable_irq(priv);
 
@@ -221,8 +438,11 @@ static void lr_isr(struct device *dev)
 	    goto out;
 	}
 
-        lr_eth_recv(priv, priv->rxb, n);
+        if (lr_eth_recv(priv, priv->rxb, n, pkt) < 0) {
+	    goto out;
+	}
 
+#ifdef OLD
         hexdump(priv->rxb, n, "%zd byte(s)", n);
 
 	if (net_pkt_write(pkt, priv->rxb, n)) {
@@ -232,6 +452,7 @@ static void lr_isr(struct device *dev)
 		goto out;
 	}
 	net_recv_data(get_iface(priv, vlan_tag), pkt);
+#endif
    }
    else
    {
@@ -314,7 +535,15 @@ int lr_probe(const struct device *dev)
 
 static enum ethernet_hw_caps lr_caps(const struct device *dev)
 {
-   return ETHERNET_LINK_10BASE_T  | ETHERNET_LINK_100BASE_T;
+   return ETHERNET_LINK_10BASE_T 
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+	| ETHERNET_PTP 
+#endif
+#if defined(CONFIG_NET_PROMISCUOUS_MODE)
+        | ETHERNET_PROMISC_MODE
+#endif
+
+   	| ETHERNET_LINK_100BASE_T;
 }
 
 
@@ -340,8 +569,19 @@ static void lr_iface_init(struct net_if *iface)
     return;
 }
 
+#if defined(CONFIG_PTP_CLOCK)
+static const struct device *lr_get_ptp_clock(const struct device *dev)
+{
+	struct net_local_lr *priv = dev->data;
+        return priv->ptp_clock;
+}
+#endif
+
 static const struct ethernet_api lr_api = {
         .iface_api.init         = lr_iface_init,
+#if defined(CONFIG_PTP_CLOCK)
+        .get_ptp_clock          = lr_get_ptp_clock,
+#endif
         .get_capabilities       = lr_caps,
         .send                   = lr_send,
 };
@@ -357,3 +597,92 @@ ETH_NET_DEVICE_DT_INST_DEFINE(0,
                     CONFIG_ETH_INIT_PRIORITY,
                     &lr_api,
                     NET_ETH_MTU);
+
+
+#define CONFIG_ETH_LOWRISC_INTERFACE_COUNT 1
+
+#if defined(CONFIG_PTP_CLOCK_LOWRISC)
+#if IS_ENABLED(CONFIG_NET_GPTP)
+BUILD_ASSERT(								\
+	CONFIG_ETH_LOWRISC_INTERFACE_COUNT == CONFIG_NET_GPTP_NUM_PORTS, \
+	"Number of network interfaces must match gPTP port count");
+#endif
+
+struct ptp_context {
+	const struct device *eth_dev;
+};
+
+//#define DEFINE_PTP_DEV_DATA(x, _) 
+static struct ptp_context ptp_context_0;
+
+static int ptp_clock_set_lowrisc(const struct device *clk,
+				      struct net_ptp_time *tm)
+{
+	ARG_UNUSED(clk);
+	ARG_UNUSED(tm);
+
+	/* We cannot set the host device time so this function
+	 * does nothing.
+	 */
+
+	return 0;
+}
+
+static int ptp_clock_get_lowrisc(const struct device *clk,
+				      struct net_ptp_time *tm)
+{
+	ARG_UNUSED(clk);
+
+	return lr_eth_clock_gettime(tm);
+}
+
+static int ptp_clock_adjust_lowrisc(const struct device *clk,
+					 int increment)
+{
+	ARG_UNUSED(clk);
+	ARG_UNUSED(increment);
+
+	/* We cannot adjust the host device time so this function
+	 * does nothing.
+	 */
+
+	return 0;
+}
+
+static int ptp_clock_rate_adjust_lowrisc(const struct device *clk,
+					      float ratio)
+{
+	ARG_UNUSED(clk);
+	ARG_UNUSED(ratio);
+
+	/* We cannot adjust the host device time so this function
+	 * does nothing.
+	 */
+
+	return 0;
+}
+
+static const struct ptp_clock_driver_api ptp_api = {
+	.set = ptp_clock_set_lowrisc,
+	.get = ptp_clock_get_lowrisc,
+	.adjust = ptp_clock_adjust_lowrisc,
+	.rate_adjust = ptp_clock_rate_adjust_lowrisc,
+};
+
+static int lr_ptp_init(const struct device *port)
+{
+	const struct device *eth_dev = DEVICE_DT_INST_GET(0);
+	struct net_local_lr *dev_data = eth_dev->data;
+	struct ptp_context *ptp_context = port->data;
+
+	dev_data->ptp_clock = port;
+	ptp_context->eth_dev = eth_dev;
+
+	return 0;
+}
+
+DEVICE_DEFINE(eth_lowrisc_ptp_clock_0, PTP_CLOCK_NAME, lr_ptp_init,
+		    device_pm_control_nop, &ptp_context_0, NULL, POST_KERNEL,
+		    CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &ptp_api);
+
+#endif /* CONFIG_PTP_CLOCK_LOWRISC */

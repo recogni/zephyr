@@ -160,7 +160,7 @@ static void gptp_md_pdelay_reset(int port)
 	struct gptp_pdelay_req_state *state;
 	struct gptp_port_ds *port_ds;
 
-	NET_WARN("Reset Pdelay requests");
+	//NET_WARN("Reset Pdelay requests");
 
 	state = &GPTP_PORT_STATE(port)->pdelay_req;
 	port_ds = GPTP_PORT_DS(port);
@@ -406,6 +406,7 @@ static void gptp_md_pdelay_compute(int port)
 	} else {
 		port_ds->as_capable = false;
 
+		//BRETT: See this
 		NET_WARN("Not AS capable: %u ns > %u ns",
 			 (uint32_t)port_ds->neighbor_prop_delay,
 			 (uint32_t)port_ds->neighbor_prop_delay_thresh);
@@ -648,12 +649,14 @@ static void gptp_md_pdelay_req_state_machine(int port)
 
 	case GPTP_PDELAY_REQ_WAIT_RESP:
 		if (state->pdelay_timer_expired) {
+			//NET_WARN("pdelay_timer_expired 1");
 			state->state = GPTP_PDELAY_REQ_RESET;
 		} else if (state->rcvd_pdelay_resp != 0U) {
 			pkt = state->rcvd_pdelay_resp_ptr;
 			if (!gptp_handle_pdelay_resp(port, pkt)) {
 				state->state = GPTP_PDELAY_REQ_WAIT_FOLLOW_UP;
 			} else {
+				NET_WARN("pdelay_timer_expired 2");
 				state->state = GPTP_PDELAY_REQ_RESET;
 			}
 		}
@@ -662,6 +665,7 @@ static void gptp_md_pdelay_req_state_machine(int port)
 
 	case GPTP_PDELAY_REQ_WAIT_FOLLOW_UP:
 		if (state->pdelay_timer_expired) {
+			NET_WARN("pdelay_timer_expired 3");
 			state->state = GPTP_PDELAY_REQ_RESET;
 		} else if (state->rcvd_pdelay_follow_up != 0U) {
 			pkt = state->rcvd_pdelay_follow_up_ptr;
@@ -669,6 +673,7 @@ static void gptp_md_pdelay_req_state_machine(int port)
 				gptp_md_pdelay_compute(port);
 				state->state = GPTP_PDELAY_REQ_WAIT_ITV_TIMER;
 			} else {
+				NET_WARN("pdelay_timer_expired 4");
 				state->state = GPTP_PDELAY_REQ_RESET;
 			}
 		}

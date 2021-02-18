@@ -66,7 +66,7 @@ void net_eth_ipv6_mcast_to_mac_addr(const struct in6_addr *ipv6_addr,
 			 net_sprint_ll_addr((src)->addr,		   \
 					    sizeof(struct net_eth_addr))); \
 									   \
-		NET_DBG("iface %p src %s dst %s type 0x%x len %zu",	   \
+		NET_WARN("iface %p src %s dst %s type 0x%x len %zu",	   \
 			net_pkt_iface(pkt), log_strdup(out),		   \
 			log_strdup(net_sprint_ll_addr((dst)->addr,	   \
 					    sizeof(struct net_eth_addr))), \
@@ -168,6 +168,21 @@ enum net_verdict ethernet_check_ipv4_bcast_addr(struct net_pkt *pkt,
 	return NET_OK;
 }
 
+struct {
+	int total_recv;
+	int drop1;
+	int drop2;
+	int TYPE_IPARP;
+	int TYPE_IPV6;
+	int TYPE_PTP;
+	int TYPE_LLDP;
+	int TYPE_unknown;
+	int notme;
+	int handle_ptp;
+	int print_ll;
+	int arp;
+} stack_stats;
+
 static enum net_verdict ethernet_recv(struct net_if *iface,
 				      struct net_pkt *pkt)
 {
@@ -178,12 +193,15 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 	struct net_linkaddr *lladdr;
 	sa_family_t family;
 
+	stack_stats.total_recv++;
+
 	/* This expects that the Ethernet header is in the first net_buf
 	 * fragment. This is a safe expectation here as it would not make
 	 * any sense to split the Ethernet header to two net_buf's by the
 	 * Ethernet driver.
 	 */
 	if (hdr == NULL || pkt->buffer->len < hdr_len) {
+		stack_stats.drop1++;
 		goto drop;
 	}
 
@@ -203,19 +221,23 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 	switch (type) {
 	case NET_ETH_PTYPE_IP:
 	case NET_ETH_PTYPE_ARP:
+		stack_stats.TYPE_IPARP++;
 		net_pkt_set_family(pkt, AF_INET);
 		family = AF_INET;
 		break;
 	case NET_ETH_PTYPE_IPV6:
+		stack_stats.TYPE_IPV6++;
 		net_pkt_set_family(pkt, AF_INET6);
 		family = AF_INET6;
 		break;
 #if defined(CONFIG_NET_GPTP)
 	case NET_ETH_PTYPE_PTP:
+		stack_stats.TYPE_PTP++;
 		family = AF_UNSPEC;
 		break;
 #endif
 	case NET_ETH_PTYPE_LLDP:
+		stack_stats.TYPE_LLDP++;
 #if defined(CONFIG_NET_LLDP)
 		net_buf_pull(pkt->frags, hdr_len);
 		return net_lldp_recv(iface, pkt);
@@ -225,6 +247,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 #endif
 	default:
 		NET_DBG("Unknown hdr type 0x%04x iface %p", type, iface);
+		stack_stats.TYPE_unknown++;
 		goto drop;
 	}
 
@@ -254,6 +277,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 				       net_pkt_lladdr_dst(pkt));
 		}
 	} else {
+		stack_stats.print_ll++;
 		print_ll_addrs(pkt, type, net_pkt_get_len(pkt),
 			       net_pkt_lladdr_src(pkt),
 			       net_pkt_lladdr_dst(pkt));
@@ -273,6 +297,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 		/* The ethernet frame is not for me as the link addresses
 		 * are different.
 		 */
+		stack_stats.notme++;
 		NET_DBG("Dropping frame, not for me [%s]",
 			log_strdup(net_sprint_ll_addr(
 					   net_if_get_link_addr(iface)->addr,
@@ -284,6 +309,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 
 	if (IS_ENABLED(CONFIG_NET_IPV4) && type == NET_ETH_PTYPE_IP &&
 	    ethernet_check_ipv4_bcast_addr(pkt, hdr) == NET_DROP) {
+		stack_stats.drop2++;
 		goto drop;
 	}
 
@@ -291,6 +317,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 
 	if (IS_ENABLED(CONFIG_NET_ARP) &&
 	    family == AF_INET && type == NET_ETH_PTYPE_ARP) {
+		stack_stats.arp++;
 		NET_DBG("ARP packet from %s received",
 			log_strdup(net_sprint_ll_addr(
 					   (uint8_t *)hdr->src.addr,
@@ -305,6 +332,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 	}
 
 	if (IS_ENABLED(CONFIG_NET_GPTP) && type == NET_ETH_PTYPE_PTP) {
+		stack_stats.handle_ptp++;
 		return net_gptp_recv(iface, pkt);
 	}
 
