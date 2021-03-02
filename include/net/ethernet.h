@@ -467,6 +467,15 @@ static inline bool net_eth_is_addr_lldp_multicast(struct net_eth_addr *addr)
 	    addr->addr[5] == 0x0e) {
 		return true;
 	}
+	/* BRETT Hack */
+	if (addr->addr[0] == 0x01 &&
+	    addr->addr[1] == 0x1b &&
+	    addr->addr[2] == 0x19 &&
+	    addr->addr[3] == 0x00 &&
+	    addr->addr[4] == 0x00 &&
+	    addr->addr[5] == 0x00) {
+		return true;
+	}
 #endif
 
 	return false;

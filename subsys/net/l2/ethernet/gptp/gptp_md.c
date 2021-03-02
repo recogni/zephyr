@@ -347,6 +347,8 @@ static void gptp_md_compute_prop_time(int port)
 	prop_time /= 2;
 
 	port_ds->neighbor_prop_delay = prop_time;
+	//BRETT HACK
+	port_ds->neighbor_prop_delay = 99999;
 }
 
 static void gptp_md_pdelay_compute(int port)

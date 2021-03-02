@@ -44,6 +44,7 @@ struct {
 } eth_stats;
 
 static struct net_if *get_iface(struct net_local_lr *ctx, uint16_t vlan_tag);
+static void get_sys_time(struct net_ptp_time *tm);
 
 #if defined(CONFIG_ETH_LOWRISC_VERBOSE_DEBUG)
 #define hexdump(_buf, _len, fmt, args...)				\
@@ -138,9 +139,9 @@ static struct gptp_hdr *lr_check_gptp_msg(struct net_pkt *pkt,
         return gptp_hdr;
 }
 
+#ifdef NOTYET
 static int lr_eth_clock_gettime(struct net_ptp_time *time)
 {
-#ifdef NOTYET
 	struct timespec tp;
 	int ret;
 
@@ -151,10 +152,10 @@ static int lr_eth_clock_gettime(struct net_ptp_time *time)
 
 	time->second = tp.tv_sec;
 	time->nanosecond = tp.tv_nsec;
-#endif
 
 	return 0;
 }
+#endif
 
 static void lr_update_pkt_priority(struct gptp_hdr *hdr, struct net_pkt *pkt)
 {
@@ -204,7 +205,7 @@ static void lr_update_gptp(struct net_if *iface, struct net_pkt *pkt,
 static /* inline */ void lr_timestamp_tx_pkt(struct gptp_hdr *hdr, struct net_pkt *pkt)
 {
         struct net_ptp_time timestamp;
-        //timestamp = get_current_ts(gmac);
+	get_sys_time(&timestamp);
         net_pkt_set_timestamp(pkt, &timestamp);
 }
 
@@ -214,19 +215,7 @@ static inline void lr_timestamp_rx_pkt(struct gptp_hdr *hdr,
 {
         struct net_ptp_time timestamp;
 
-	/*
-	 From drivers/kscan/kscan_mchp_xec.c
-	 uint32_t stop_cycles = k_cycle_get_32();
-	 cycles_spent =  stop_cycles - start_cycles;
-         microsecs_spent = CLOCK_32K_HW_CYCLES_TO_US(cycles_spent);
-	 ***/
-
-        //timestamp = get_current_ts(gmac);
-	
-	//Call somekind of timeofday thing to get time.
-	//Number ticks?
-	//Brett
-
+	get_sys_time(&timestamp);
         net_pkt_set_timestamp(pkt, &timestamp);
 }
 
@@ -615,25 +604,63 @@ struct ptp_context {
 //#define DEFINE_PTP_DEV_DATA(x, _) 
 static struct ptp_context ptp_context_0;
 
+struct net_ptp_time glob_last_ptp_time;
+int64_t glob_last_uptime;
+
+/*
+ * In real hw based system: Copy the given time into eth controller hw
+ * In our SW system: set system time based on given time.
+ */
 static int ptp_clock_set_lowrisc(const struct device *clk,
 				      struct net_ptp_time *tm)
 {
 	ARG_UNUSED(clk);
-	ARG_UNUSED(tm);
 
-	/* We cannot set the host device time so this function
-	 * does nothing.
-	 */
+	/* ptp_time was set at time x */
+	glob_last_ptp_time = *tm;
+	glob_last_uptime = k_uptime_get();
+	LOG_ERR("SETTING TIME");
 
 	return 0;
 }
 
+static void get_sys_time(struct net_ptp_time *tm)
+{
+	/* return the last ptp_time + delta since x */
+	int64_t nano_diff;
+	int64_t uptime = k_uptime_get(); 	      		//Uptime in milliseconds
+	//LOG_ERR("Uptime %lld", uptime);
+
+	int64_t milli_diff = uptime - glob_last_uptime;		//Delta since last set (in millisecs) */
+
+	/* Covert millis to secs and millis */
+	int64_t sec_diff = milli_diff/1000;
+
+	milli_diff = milli_diff % 1000;
+	nano_diff = milli_diff * 1000000; 			/* millisecond to nano */
+	//LOG_ERR("diff %lld: %lld", sec_diff, milli_diff);
+
+        tm->second = glob_last_ptp_time.second + sec_diff;
+        tm->nanosecond = glob_last_ptp_time.nanosecond + nano_diff;
+
+	while (tm->nanosecond > 1000000000) {
+		tm->nanosecond -= 1000000000;
+		tm->second++;
+	}
+}
+
+/*
+ * In real hw based ethnet controller: Fill in given tm with latest time from eth controller
+ * In sw based ptp controller: get system time and fill into tm
+ */
 static int ptp_clock_get_lowrisc(const struct device *clk,
 				      struct net_ptp_time *tm)
 {
 	ARG_UNUSED(clk);
 
-	return lr_eth_clock_gettime(tm);
+	get_sys_time(tm);
+
+	return 0;
 }
 
 static int ptp_clock_adjust_lowrisc(const struct device *clk,

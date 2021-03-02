@@ -746,6 +746,7 @@ static void gptp_update_local_port_clock(void)
 	struct net_ptp_time tm;
 	int key;
 
+NET_ERR("***  Update Local Clock  ***");
 	state = &GPTP_STATE()->clk_slave_sync;
 	global_ds = GPTP_GLOBAL_DS();
 	port = state->pss_rcv_ptr->local_port_number;
@@ -914,6 +915,7 @@ static void gptp_mi_clk_master_sync_offset_state_machine(void)
 }
 
 #if defined(CONFIG_NET_GPTP_GM_CAPABLE)
+xx
 static inline void gptp_mi_setup_sync_send_time(void)
 {
 	struct gptp_clk_master_sync_snd_state *state;
