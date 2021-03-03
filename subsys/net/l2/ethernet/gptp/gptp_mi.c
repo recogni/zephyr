@@ -378,6 +378,7 @@ static void gptp_mi_pss_rcv_compute(int port)
 	struct gptp_md_sync_info *sync_rcv;
 	struct gptp_port_ds *port_ds;
 
+NET_ERR("gptp_mi_pss_rcv_compute");
 	state = &GPTP_PORT_STATE(port)->pss_rcv;
 	pss = &state->pss;
 	sync_rcv = &state->sync_rcv;
@@ -432,11 +433,14 @@ static void gptp_mi_pss_rcv_state_machine(int port)
 
 	switch (state->state) {
 	case GPTP_PSS_RCV_DISCARD:
+
+		NET_ERR("Setting: Ready to discard sync");
 		k_timer_stop(&state->rcv_sync_receipt_timeout_timer);
 		state->rcv_sync_receipt_timeout_timer_expired = false;
 
 		__fallthrough;
 	case GPTP_PSS_RCV_RECEIVED_SYNC:
+		NET_ERR("Setting: Ready to rx sync");
 		if (state->rcvd_md_sync) {
 			state->rcvd_md_sync = false;
 			gptp_mi_pss_rcv_compute(port);
@@ -653,6 +657,7 @@ static void gptp_mi_site_sync_sync_state_machine(void)
 
 	if (!state->pss_rcv_ptr) {
 		/* We do not have connection to GM yet */
+		//NET_ERR("No connection to GM yet");
 		return;
 	}
 
@@ -669,6 +674,7 @@ static void gptp_mi_site_sync_sync_state_machine(void)
 			state->rcvd_pss = false;
 			if (gptp_is_slave_port(local_port_number) &&
 					gm_present) {
+				NET_ERR("GPTP_SSS_RECEIVING_SYNC && is_slave_port && gm_present");
 				gptp_mi_site_ss_prepare_pss_send();
 
 				/*
@@ -683,6 +689,8 @@ static void gptp_mi_site_sync_sync_state_machine(void)
 				 */
 				clk_ss->pss_rcv_ptr = &state->pss_send;
 				clk_ss->rcvd_pss = true;
+			} else {
+				NET_ERR("GPTP_SSS_RECEIVING_SYNC Slave_port(%d) %d, gm_present %d", local_port_number, gptp_is_slave_port(local_port_number), gm_present);
 			}
 		}
 

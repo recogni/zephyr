@@ -154,7 +154,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 	switch (hdr->message_type) {
 	case GPTP_SYNC_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_SYNC_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			NET_ERR("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "SYNC",
 				 GPTP_SYNC_LEN,
@@ -164,6 +164,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		}
 
 		PRINT_INFO("SYNC", hdr, pkt);
+		NET_ERR("Got a SYNC");
 
 		sync_rcv_state->rcvd_sync = true;
 
