@@ -53,7 +53,3 @@ CONFIG_NEWLIB_LIBC=y
 #ping needs a random number generator
 CONFIG_TEST_RANDOM_GENERATOR=y
 
-
-#Logging thread sometimes gets hung up wthout this
-CONFIG_LOG_IMMEDIATE=y
-
