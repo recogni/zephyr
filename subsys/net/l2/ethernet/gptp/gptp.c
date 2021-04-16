@@ -6,6 +6,7 @@
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
+#include <stdio.h>
 
 #include <net/net_pkt.h>
 #include <ptp_clock.h>
@@ -88,10 +89,18 @@ static void gptp_compute_clock_identity(int port)
  * msg variable is always a const string that is not allocated from the stack.
  * If this changes at some point, then add log_strdup(msg) here.
  */
-#define PRINT_INFO(msg, hdr, pkt)				\
-	NET_DBG("Received %s seq %d pkt %p", msg,		\
-		ntohs(hdr->sequence_id), pkt)			\
+#ifdef PRINTING
+#define RXED(msg, hdr, pkt)				\
+	 printf("Rxed %s\t seq %d \n", msg,		\
+		ntohs(hdr->sequence_id)) 		\
 
+#define MY_DBG(fmt, ...)  \
+	printf(fmt, ##__VA_ARGS__) \
+
+#else
+#define RXED(msg, hdr, pkt)
+#define MY_DBG(fmt, ...)
+#endif
 
 static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
 {
@@ -110,11 +119,11 @@ static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("PDELAY_REQ", hdr, pkt);
+		RXED("PDELAY_REQ", hdr, pkt);
 
 		port = gptp_get_port_number(iface);
 		if (port == -ENODEV) {
-			NET_DBG("No port found for gPTP buffer");
+			MY_DBG("No port found for gPTP buffer");
 			return handled;
 		}
 
@@ -144,7 +153,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 	port = gptp_get_port_number(net_pkt_iface(pkt));
 	if (port == -ENODEV) {
-		NET_DBG("No port found for ptp buffer");
+		MY_DBG("No port found for ptp buffer");
 		return;
 	}
 
@@ -163,8 +172,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("SYNC", hdr, pkt);
-		NET_ERR("Got a SYNC");
+		RXED("SYNC", hdr, pkt);
 
 		sync_rcv_state->rcvd_sync = true;
 
@@ -181,7 +189,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_DELAY_REQ_MESSAGE:
-		NET_DBG("Delay Request not handled.");
+		MY_DBG("Delay Request not handled.");
 		break;
 
 	case GPTP_PATH_DELAY_REQ_MESSAGE:
@@ -206,7 +214,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("PDELAY_RESP", hdr, pkt);
+		RXED("PDELAY_RESP", hdr, pkt);
 
 		pdelay_req_state->rcvd_pdelay_resp++;
 
@@ -231,7 +239,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("FOLLOWUP", hdr, pkt);
+		RXED("FOLLOWUP", hdr, pkt);
 
 		sync_rcv_state->rcvd_follow_up = true;
 
@@ -242,8 +250,8 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 		/* Keep the pkt alive until info is extracted. */
 		sync_rcv_state->rcvd_follow_up_ptr = net_pkt_ref(pkt);
-		NET_DBG("Keeping %s seq %d pkt %p", "FOLLOWUP",
-			ntohs(hdr->sequence_id), pkt);
+		MY_DBG("Keeping %s seq %d \n", "FOLLOWUP",
+			ntohs(hdr->sequence_id));
 		break;
 
 	case GPTP_PATH_DELAY_FOLLOWUP_MESSAGE:
@@ -257,7 +265,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("PDELAY_FOLLOWUP", hdr, pkt);
+		RXED("PDELAY_FOLLOWUP", hdr, pkt);
 
 		pdelay_req_state->rcvd_pdelay_follow_up++;
 
@@ -284,7 +292,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("ANNOUNCE", hdr, pkt);
+		RXED("ANNOUNCE", hdr, pkt);
 
 		pa_rcv_state = &GPTP_PORT_STATE(port)->pa_rcv;
 		bmca_data = GPTP_PORT_BMCA_DATA(port);
@@ -310,18 +318,18 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			break;
 		}
 
-		PRINT_INFO("SIGNALING", hdr, pkt);
+		RXED("SIGNALING", hdr, pkt);
 
 		gptp_handle_signaling(port, pkt);
 		break;
 
 	case GPTP_MANAGEMENT_MESSAGE:
-		PRINT_INFO("MANAGEMENT", hdr, pkt);
+		RXED("MANAGEMENT", hdr, pkt);
 		GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 		break;
 
 	default:
-		NET_DBG("Received unknown message %x", hdr->message_type);
+		MY_DBG("Received unknown message %x", hdr->message_type);
 		GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 		break;
 	}
@@ -532,7 +540,7 @@ static void gptp_state_machine(void)
 			gptp_mi_port_bmca_state_machines(port);
 			break;
 		default:
-			NET_DBG("%s: Unknown port state", __func__);
+			MY_DBG("%s: Unknown port state", __func__);
 			break;
 		}
 
@@ -546,7 +554,7 @@ static void gptp_thread(void)
 {
 	int port;
 
-	NET_DBG("Starting PTP thread");
+	MY_DBG("Starting PTP thread");
 
 	gptp_init_clock_ds();
 
@@ -952,7 +960,7 @@ static void vlan_enabled(struct k_work *work)
 
 		port = gptp_get_port_number(vlan->iface);
 		if (port < 0) {
-			NET_DBG("No port found for iface %p", vlan->iface);
+			MY_DBG("No port found for iface %p", vlan->iface);
 			return;
 		}
 
@@ -973,7 +981,7 @@ static void vlan_disabled(struct k_work *work)
 
 	port = gptp_get_port_number(vlan->iface);
 	if (port < 0) {
-		NET_DBG("No port found for iface %p", vlan->iface);
+		MY_DBG("No port found for iface %p", vlan->iface);
 		return;
 	}
 
@@ -1007,11 +1015,11 @@ static void vlan_event_handler(struct net_mgmt_event_callback *cb,
 		/* We found the right tag, now start gPTP for this interface */
 		k_work_init(&vlan.work, vlan_enabled);
 
-		NET_DBG("VLAN tag %d %s for iface %p", tag, "enabled", iface);
+		MY_DBG("VLAN tag %d %s for iface %p", tag, "enabled", iface);
 	} else {
 		k_work_init(&vlan.work, vlan_disabled);
 
-		NET_DBG("VLAN tag %d %s for iface %p", tag, "disabled", iface);
+		MY_DBG("VLAN tag %d %s for iface %p", tag, "disabled", iface);
 	}
 
 	k_work_submit(&vlan.work);

@@ -8,6 +8,7 @@
 LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 
 #include <net/net_if.h>
+#include <stdio.h>
 
 #include "gptp_messages.h"
 #include "gptp_data_set.h"
@@ -24,8 +25,9 @@ static bool ts_cb_registered;
 static const struct net_eth_addr gptp_multicast_eth_addr = {
 	{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e } };
 
-#define NET_GPTP_INFO(msg, pkt)						\
-	if (CONFIG_NET_GPTP_LOG_LEVEL >= LOG_LEVEL_DBG) {		\
+
+#define SENDING(msg, pkt)						\
+		if (0) {     \
 		struct gptp_hdr *hdr = GPTP_HDR(pkt);			\
 									\
 		if (hdr->message_type == GPTP_ANNOUNCE_MESSAGE) {	\
@@ -37,22 +39,22 @@ static const struct net_eth_addr gptp_multicast_eth_addr = {
 				output,					\
 				sizeof(output));			\
 									\
-			NET_DBG("Sending %s seq %d pkt %p",		\
+			printf("Sending %s seq %d\n",		\
 				msg,					\
-				ntohs(hdr->sequence_id), pkt);		\
+				ntohs(hdr->sequence_id));		\
 									\
-			NET_DBG("  GM %d/%d/0x%x/%d/%s",\
+			printf("  GM %d/%d/0x%x/%d/%s\n ",           \
 				ann->root_system_id.grand_master_prio1, \
 				ann->root_system_id.clk_quality.clock_class, \
 				ann->root_system_id.clk_quality.clock_accuracy,\
 				ann->root_system_id.grand_master_prio2,	\
-				log_strdup(output));			\
+				output);			\
 		} else {						\
-			NET_DBG("Sending %s seq %d pkt %p",		\
+			printf("Sending %s seq %d\n",		\
 				msg,					\
-				ntohs(hdr->sequence_id), pkt);		\
+				ntohs(hdr->sequence_id));		\
 		}							\
-	}
+	}           \
 
 struct gptp_hdr *gptp_get_hdr(struct net_pkt *pkt)
 {
@@ -849,7 +851,7 @@ void gptp_send_sync(int port, struct net_pkt *pkt)
 	 */
 	net_pkt_ref(pkt);
 
-	NET_GPTP_INFO("SYNC", pkt);
+	SENDING("SYNC", pkt);
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -858,7 +860,7 @@ void gptp_send_follow_up(int port, struct net_pkt *pkt)
 {
 	GPTP_STATS_INC(port, tx_fup_count);
 
-	NET_GPTP_INFO("FOLLOWUP", pkt);
+	SENDING("FOLLOWUP", pkt);
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -867,7 +869,7 @@ void gptp_send_announce(int port, struct net_pkt *pkt)
 {
 	GPTP_STATS_INC(port, tx_announce_count);
 
-	NET_GPTP_INFO("ANNOUNCE", pkt);
+	SENDING("ANNOUNCE", pkt);
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -896,7 +898,7 @@ void gptp_send_pdelay_req(int port)
 
 		GPTP_STATS_INC(port, tx_pdelay_req_count);
 
-		NET_GPTP_INFO("PDELAY_REQ", pkt);
+		SENDING("PDELAY_REQ", pkt);
 
 		net_if_queue_tx(net_pkt_iface(pkt), pkt);
 	} else {
@@ -922,7 +924,7 @@ void gptp_send_pdelay_resp(int port, struct net_pkt *pkt,
 
 	GPTP_STATS_INC(port, tx_pdelay_resp_count);
 
-	NET_GPTP_INFO("PDELAY_RESP", pkt);
+	SENDING("PDELAY_RESP", pkt);
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -945,7 +947,7 @@ void gptp_send_pdelay_follow_up(int port, struct net_pkt *pkt,
 
 	GPTP_STATS_INC(port, tx_pdelay_resp_fup_count);
 
-	NET_GPTP_INFO("PDELAY_FOLLOWUP", pkt);
+	SENDING("PDELAY_FOLLOWUP", pkt);
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }

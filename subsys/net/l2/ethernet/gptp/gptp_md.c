@@ -12,6 +12,13 @@ LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 #include "gptp_data_set.h"
 #include "gptp_private.h"
 
+#include <stdio.h>
+
+#define FORCE_UPDATE
+
+#ifdef FORCE_UPDATE
+#include <posix/time.h>
+#endif
 static void gptp_md_sync_prepare(struct net_pkt *pkt,
 				 struct gptp_md_sync_info *sync_send,
 				 int port_number)
@@ -101,9 +108,15 @@ static int gptp_set_md_sync_receive(int port,
 	struct net_ptp_time *sync_ts;
 	double prop_delay_rated;
 	double delay_asymmetry_rated;
+#ifdef FORCE_UPDATE
+#define	HACK_UPDATE_SECS	10
+	static int count = 0;
+	static bool first = true;
+#endif
 
 	state = &GPTP_PORT_STATE(port)->sync_rcv;
 	if (!state->rcvd_sync_ptr || !state->rcvd_follow_up_ptr) {
+		printf("%s: !state->rcvd_sync_ptr || !state->rcvd_follow_up_ptr\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -123,6 +136,31 @@ static int gptp_set_md_sync_receive(int port,
 		ntohs(fup->prec_orig_ts_secs_high);
 	sync_rcv->precise_orig_ts._sec.low = ntohl(fup->prec_orig_ts_secs_low);
 	sync_rcv->precise_orig_ts.nanosecond = ntohl(fup->prec_orig_ts_nsecs);
+
+#ifdef FORCE_UPDATE
+	if (first || ++count >= HACK_UPDATE_SECS) {
+		struct timespec tp;
+		tp.tv_sec = sync_rcv->precise_orig_ts.second;
+		tp.tv_nsec = sync_rcv->precise_orig_ts.nanosecond;
+		clock_settime(CLOCK_REALTIME, &tp);
+
+		if (0) {
+			struct tm tm, *tm_p = &tm;
+			gmtime_r(&tp.tv_sec, tm_p);
+			printf("sec:ns  %d:%d  ", sync_rcv->precise_orig_ts._sec.low, sync_rcv->precise_orig_ts.nanosecond);
+			printf("%d-%02u-%02u " "%02u:%02u:%02u UTC\n",
+			    tm_p->tm_year + 1900,
+			    tm_p->tm_mon + 1,
+			    tm_p->tm_mday,
+			    tm_p->tm_hour,
+			    tm_p->tm_min,
+			    tm_p->tm_sec);
+
+		}
+		count = 0;
+		first = false;
+	}
+#endif
 
 	/* Compute time when sync was sent by the remote. */
 	sync_rcv->upstream_tx_time = sync_ts->second;
@@ -160,7 +198,7 @@ static void gptp_md_pdelay_reset(int port)
 	struct gptp_pdelay_req_state *state;
 	struct gptp_port_ds *port_ds;
 
-	//NET_WARN("Reset Pdelay requests");
+	NET_WARN("Reset Pdelay requests");
 
 	state = &GPTP_PORT_STATE(port)->pdelay_req;
 	port_ds = GPTP_PORT_DS(port);
@@ -409,7 +447,7 @@ static void gptp_md_pdelay_compute(int port)
 		port_ds->as_capable = false;
 
 		//BRETT: See this
-		NET_WARN("Not AS capable: %u ns > %u ns",
+		NET_ERR("Not AS capable: %u ns > %u ns",
 			 (uint32_t)port_ds->neighbor_prop_delay,
 			 (uint32_t)port_ds->neighbor_prop_delay_thresh);
 

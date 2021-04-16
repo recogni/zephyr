@@ -14,6 +14,8 @@ LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 #include "gptp_state.h"
 #include "gptp_private.h"
 
+#include <stdio.h>
+
 #if CONFIG_NET_GPTP_LOG_LEVEL >= LOG_LEVEL_DBG
 static const char * const state2str(enum gptp_port_state state)
 {
@@ -378,7 +380,6 @@ static void gptp_mi_pss_rcv_compute(int port)
 	struct gptp_md_sync_info *sync_rcv;
 	struct gptp_port_ds *port_ds;
 
-NET_ERR("gptp_mi_pss_rcv_compute");
 	state = &GPTP_PORT_STATE(port)->pss_rcv;
 	pss = &state->pss;
 	sync_rcv = &state->sync_rcv;
@@ -434,13 +435,13 @@ static void gptp_mi_pss_rcv_state_machine(int port)
 	switch (state->state) {
 	case GPTP_PSS_RCV_DISCARD:
 
-		NET_ERR("Setting: Ready to discard sync");
+		//NET_ERR("Setting: Ready to discard sync");
 		k_timer_stop(&state->rcv_sync_receipt_timeout_timer);
 		state->rcv_sync_receipt_timeout_timer_expired = false;
 
 		__fallthrough;
 	case GPTP_PSS_RCV_RECEIVED_SYNC:
-		NET_ERR("Setting: Ready to rx sync");
+		//NET_ERR("Setting: Ready to rx sync");
 		if (state->rcvd_md_sync) {
 			state->rcvd_md_sync = false;
 			gptp_mi_pss_rcv_compute(port);
@@ -449,6 +450,8 @@ static void gptp_mi_pss_rcv_state_machine(int port)
 
 			site_ss_state->pss_rcv_ptr = &state->pss;
 			site_ss_state->rcvd_pss = true;
+
+			if (0) printf("%s:%d setting rcvd_pss = true\n", __FUNCTION__, __LINE__);
 
 			k_timer_stop(&state->rcv_sync_receipt_timeout_timer);
 			state->rcv_sync_receipt_timeout_timer_expired = false;
@@ -529,6 +532,7 @@ static void gptp_mi_pss_send_state_machine(int port)
 	if (state->rcvd_pss_sync && ((!port_ds->ptt_port_enabled) ||
 				     !port_ds->as_capable)) {
 		state->rcvd_pss_sync = false;
+		printf("%s:%d setting rcvd_pss_sync = false\n", __FUNCTION__, __LINE__);
 		state->state = GPTP_PSS_SEND_TRANSMIT_INIT;
 
 		return;
@@ -550,6 +554,7 @@ static void gptp_mi_pss_send_state_machine(int port)
 		if (state->rcvd_pss_sync) {
 			gptp_mi_pss_store_last_pss(port);
 			state->rcvd_pss_sync = false;
+			printf("%s:%d setting rcvd_pss_sync = false\n", __FUNCTION__, __LINE__);
 		}
 
 		/* Make sure no previous timer is still running. */
@@ -641,6 +646,7 @@ static void gptp_mi_site_ss_send_to_pss(void)
 		pss_send = &GPTP_PORT_STATE(port)->pss_send;
 		pss_send->pss_sync_ptr = &state->pss_send;
 		pss_send->rcvd_pss_sync = true;
+		printf("%s:%d setting rcvd_pss_sync = true\n", __FUNCTION__, __LINE__);
 	}
 }
 
@@ -666,15 +672,17 @@ static void gptp_mi_site_sync_sync_state_machine(void)
 	switch (state->state) {
 	case GPTP_SSS_INITIALIZING:
 		state->rcvd_pss = false;
+		//printf("%s:%d setting rcvd_pss = false\n", __FUNCTION__, __LINE__);
 		state->state = GPTP_SSS_RECEIVING_SYNC;
 		break;
 
 	case GPTP_SSS_RECEIVING_SYNC:
 		if (state->rcvd_pss) {
 			state->rcvd_pss = false;
+			if (0) printf("%s:%d setting rcvd_pss = false\n", __FUNCTION__, __LINE__);
 			if (gptp_is_slave_port(local_port_number) &&
 					gm_present) {
-				NET_ERR("GPTP_SSS_RECEIVING_SYNC && is_slave_port && gm_present");
+				printf("GPTP_SSS_RECEIVING_SYNC && is_slave_port && gm_present\n");
 				gptp_mi_site_ss_prepare_pss_send();
 
 				/*
@@ -689,8 +697,9 @@ static void gptp_mi_site_sync_sync_state_machine(void)
 				 */
 				clk_ss->pss_rcv_ptr = &state->pss_send;
 				clk_ss->rcvd_pss = true;
+				printf("%s:%d setting rcvd_pss = true\n", __FUNCTION__, __LINE__);
 			} else {
-				NET_ERR("GPTP_SSS_RECEIVING_SYNC Slave_port(%d) %d, gm_present %d", local_port_number, gptp_is_slave_port(local_port_number), gm_present);
+				//printf("SKIP update: slave_port(%d) %d, gm_present %d\n", local_port_number, gptp_is_slave_port(local_port_number), gm_present);
 			}
 		}
 
@@ -706,6 +715,7 @@ static void gptp_mi_clk_slave_sync_compute(void)
 	struct gptp_md_sync_info *pss;
 	struct gptp_port_ds *port_ds;
 	uint64_t sync_receipt_time;
+
 
 	state = &GPTP_STATE()->clk_slave_sync;
 	offset_state = &GPTP_STATE()->clk_master_sync_offset;
@@ -754,7 +764,7 @@ static void gptp_update_local_port_clock(void)
 	struct net_ptp_time tm;
 	int key;
 
-NET_ERR("***  Update Local Clock  ***");
+//printf("\n***  Update Local Clock  ***\n\n");
 	state = &GPTP_STATE()->clk_slave_sync;
 	global_ds = GPTP_GLOBAL_DS();
 	port = state->pss_rcv_ptr->local_port_number;
@@ -830,8 +840,8 @@ NET_ERR("***  Update Local Clock  ***");
 		/* This prints too much data normally but can be enabled to see
 		 * what time we are setting to the local clock.
 		 */
-		if (0) {
-			NET_INFO("Set local clock %lu.%lu",
+		if (1) {
+			printf("Set local clock %lu.%lu\n",
 				 (unsigned long int)tm.second,
 				 (unsigned long int)tm.nanosecond);
 		}
@@ -861,20 +871,28 @@ static void gptp_mi_clk_slave_sync_state_machine(void)
 	switch (state->state) {
 	case GPTP_CLK_SLAVE_SYNC_INITIALIZING:
 		state->rcvd_pss = false;
+		//printf("%s:%d Initting rcvd_pss = false\n", __FUNCTION__, __LINE__);
 		state->state = GPTP_CLK_SLAVE_SYNC_SEND_SYNC_IND;
 		break;
 
 	case GPTP_CLK_SLAVE_SYNC_SEND_SYNC_IND:
-		if (state->rcvd_pss) {
+	//XXX BIG HACK HERE
+		if ( 0 ||  state->rcvd_pss) {
+			//printf("%s: rcvd_pss 1\n", __FUNCTION__);
 			state->rcvd_pss = false;
 			gptp_mi_clk_slave_sync_compute();
 
 #if defined(CONFIG_NET_GPTP_USE_DEFAULT_CLOCK_UPDATE)
 			/* Instead of updating SlaveClock, update LocalClock */
 			gptp_update_local_port_clock();
+#else
+XXX
 #endif
 			gptp_call_phase_dis_cb();
+		} else {
+			//printf("%s: Skip clock update cuz rcvd_pss is 0\n", __FUNCTION__);
 		}
+
 
 		break;
 	}
@@ -1004,6 +1022,7 @@ static inline void gptp_mi_tx_ps_sync_cmss(void)
 		pss_send = &GPTP_PORT_STATE(port)->pss_send;
 		pss_send->pss_sync_ptr = &state->pss_snd;
 
+		printf("%s:%d setting rcvd_pss_sync = true\n", __FUNCTION__, __LINE__);
 		pss_send->rcvd_pss_sync = true;
 	}
 }
@@ -1873,6 +1892,8 @@ static void gptp_updt_roles_tree(void)
 	global_ds->gm_present =
 		(gm_prio->root_system_id.grand_master_prio1 == 255U) ?
 		false : true;
+
+	if (0) printf("%s: setting gm_present to %d, prio1 == %d\n", __FUNCTION__, global_ds->gm_present, gm_prio->root_system_id.grand_master_prio1);
 
 	/* Assign the port role for port 0. */
 	for (port = GPTP_PORT_START; port < GPTP_PORT_END; port++) {
