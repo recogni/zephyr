@@ -12,6 +12,10 @@ LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 #include "gptp_data_set.h"
 #include "gptp_private.h"
 
+#ifdef CONFIG_PTP_CLOCK_LOWRISC
+#include <posix/time.h>
+#endif
+
 static void gptp_md_sync_prepare(struct net_pkt *pkt,
 				 struct gptp_md_sync_info *sync_send,
 				 int port_number)
@@ -101,6 +105,10 @@ static int gptp_set_md_sync_receive(int port,
 	struct net_ptp_time *sync_ts;
 	double prop_delay_rated;
 	double delay_asymmetry_rated;
+#ifdef CONFIG_PTP_CLOCK_LOWRISC
+#define UPDATE_SECS        30
+        static int count = UPDATE_SECS;
+#endif
 
 	state = &GPTP_PORT_STATE(port)->sync_rcv;
 	if (!state->rcvd_sync_ptr || !state->rcvd_follow_up_ptr) {
@@ -128,6 +136,29 @@ static int gptp_set_md_sync_receive(int port,
 	sync_rcv->upstream_tx_time = sync_ts->second;
 	sync_rcv->upstream_tx_time *= NSEC_PER_SEC;
 	sync_rcv->upstream_tx_time += sync_ts->nanosecond;
+
+#ifdef CONFIG_PTP_CLOCK_LOWRISC
+        if (++count >= UPDATE_SECS) {
+                struct timespec tp;
+                tp.tv_sec = sync_rcv->precise_orig_ts.second;
+                tp.tv_nsec = sync_rcv->precise_orig_ts.nanosecond;
+                clock_settime(CLOCK_REALTIME, &tp);
+
+                if (0) {
+                        struct tm tm, *tm_p = &tm;
+                        gmtime_r(&tp.tv_sec, tm_p);
+                        NET_WARN("sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC\n",
+			    sync_rcv->precise_orig_ts._sec.low, sync_rcv->precise_orig_ts.nanosecond,
+                            tm_p->tm_year + 1900,
+                            tm_p->tm_mon + 1,
+                            tm_p->tm_mday,
+                            tm_p->tm_hour,
+                            tm_p->tm_min,
+                            tm_p->tm_sec);
+                }
+                count = 0;
+        }
+#endif
 
 	prop_delay_rated = port_ds->neighbor_prop_delay;
 	prop_delay_rated /= port_ds->neighbor_rate_ratio;
@@ -346,6 +377,8 @@ static void gptp_md_compute_prop_time(int port)
 	prop_time -= turn_around;
 	prop_time /= 2;
 
+	//XXX Brett
+	//port_ds->neighbor_prop_delay = 99999;
 	port_ds->neighbor_prop_delay = prop_time;
 }
 
@@ -400,6 +433,7 @@ static void gptp_md_pdelay_compute(int port)
 	 * Currently, if the computed delay is negative, this means
 	 * that it is negligeable enough compared to other factors.
 	 */
+#ifdef BRETT
 	if ((port_ds->neighbor_prop_delay <=
 	     port_ds->neighbor_prop_delay_thresh)) {
 		port_ds->as_capable = true;
@@ -412,6 +446,9 @@ static void gptp_md_pdelay_compute(int port)
 
 		GPTP_STATS_INC(port, neighbor_prop_delay_exceeded);
 	}
+#else
+		port_ds->as_capable = true;
+#endif
 
 out:
 	/* Release buffers. */
