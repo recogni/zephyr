@@ -377,8 +377,6 @@ static void gptp_md_compute_prop_time(int port)
 	prop_time -= turn_around;
 	prop_time /= 2;
 
-	//XXX Brett
-	//port_ds->neighbor_prop_delay = 99999;
 	port_ds->neighbor_prop_delay = prop_time;
 }
 
@@ -429,11 +427,18 @@ static void gptp_md_pdelay_compute(int port)
 		goto out;
 	}
 
+#ifdef CONFIG_PTP_CLOCK_LOWRISC
+	/* 
+	 * Ignore prop delay violations until either
+	 * we get hw support from a different controller
+	 * or hw clock emulator in eth_lowrisc is fixed up.
+	 */
+	port_ds->as_capable = true;
+#else
 	/*
 	 * Currently, if the computed delay is negative, this means
 	 * that it is negligeable enough compared to other factors.
 	 */
-#ifdef BRETT
 	if ((port_ds->neighbor_prop_delay <=
 	     port_ds->neighbor_prop_delay_thresh)) {
 		port_ds->as_capable = true;
@@ -446,8 +451,6 @@ static void gptp_md_pdelay_compute(int port)
 
 		GPTP_STATS_INC(port, neighbor_prop_delay_exceeded);
 	}
-#else
-		port_ds->as_capable = true;
 #endif
 
 out:
