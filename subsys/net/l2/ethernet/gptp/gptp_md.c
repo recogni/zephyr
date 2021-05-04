@@ -147,7 +147,8 @@ static int gptp_set_md_sync_receive(int port,
                 if (0) {
                         struct tm tm, *tm_p = &tm;
                         gmtime_r(&tp.tv_sec, tm_p);
-                        NET_WARN("sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC\n",
+                        NET_WARN("seq %d sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC",
+				ntohs(fup_hdr->sequence_id),
 			    sync_rcv->precise_orig_ts._sec.low, sync_rcv->precise_orig_ts.nanosecond,
                             tm_p->tm_year + 1900,
                             tm_p->tm_mon + 1,
@@ -427,20 +428,15 @@ static void gptp_md_pdelay_compute(int port)
 		goto out;
 	}
 
-#ifdef CONFIG_PTP_CLOCK_LOWRISC
-	/* 
-	 * Ignore prop delay violations until either
-	 * we get hw support from a different controller
-	 * or hw clock emulator in eth_lowrisc is fixed up.
-	 */
-	port_ds->as_capable = true;
-#else
 	/*
 	 * Currently, if the computed delay is negative, this means
 	 * that it is negligeable enough compared to other factors.
 	 */
 	if ((port_ds->neighbor_prop_delay <=
 	     port_ds->neighbor_prop_delay_thresh)) {
+		if (port_ds->as_capable == false) {
+		    NET_WARN("AS capable: true");
+		}
 		port_ds->as_capable = true;
 	} else {
 		port_ds->as_capable = false;
@@ -451,7 +447,6 @@ static void gptp_md_pdelay_compute(int port)
 
 		GPTP_STATS_INC(port, neighbor_prop_delay_exceeded);
 	}
-#endif
 
 out:
 	/* Release buffers. */
