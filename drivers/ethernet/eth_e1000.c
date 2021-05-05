@@ -16,7 +16,15 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <net/ethernet.h>
 #include <ethernet/eth_stats.h>
 #include <drivers/pcie/pcie.h>
+#include <scorpio_noc.h>
+
 #include "eth_e1000_priv.h"
+
+extern void plda_pcie_isr(const struct device *ddev);
+
+void *pAmem = ((void*) (SCORPIO_NOC_AMEM_DMA_ADDRESS
+		| SCORPIO_SCPU_CLUSTER_NOC_ADDRESS));
+struct k_heap h;
 
 #if defined(CONFIG_ETH_E1000_VERBOSE_DEBUG)
 #define hexdump(_buf, _len, fmt, args...)				\
@@ -32,28 +40,28 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define hexdump(args...)
 #endif
 
-static const char *e1000_reg_to_string(enum e1000_reg_t r)
-{
+static const char* e1000_reg_to_string(enum e1000_reg_t r) {
 #define _(_x)	case _x: return #_x
 	switch (r) {
-	_(CTRL);
-	_(ICR);
-	_(ICS);
-	_(IMS);
-	_(RCTL);
-	_(TCTL);
-	_(RDBAL);
-	_(RDBAH);
-	_(RDLEN);
-	_(RDH);
-	_(RDT);
-	_(TDBAL);
-	_(TDBAH);
-	_(TDLEN);
-	_(TDH);
-	_(TDT);
-	_(RAL);
-	_(RAH);
+	_(CTRL)
+;		_(ICR);
+		_(ICS);
+		_(IMS);
+		_(RCTL);
+		_(TCTL);
+		_(RDBAL);
+		_(RDBAH);
+		_(RDLEN);
+		_(RDH);
+		_(RDT);
+		_(TDBAL);
+		_(TDBAH);
+		_(TDLEN);
+		_(TDH);
+		_(TDT);
+		_(RAL);
+		_(RAH);
+		_(MCR);
 	}
 #undef _
 	LOG_ERR("Unsupported register: 0x%x", r);
@@ -61,8 +69,7 @@ static const char *e1000_reg_to_string(enum e1000_reg_t r)
 	return NULL;
 }
 
-static struct net_if *get_iface(struct e1000_dev *ctx, uint16_t vlan_tag)
-{
+static struct net_if* get_iface(struct e1000_dev *ctx, uint16_t vlan_tag) {
 #if defined(CONFIG_NET_VLAN)
 	struct net_if *iface;
 
@@ -79,37 +86,33 @@ static struct net_if *get_iface(struct e1000_dev *ctx, uint16_t vlan_tag)
 #endif
 }
 
-static enum ethernet_hw_caps e1000_caps(const struct device *dev)
-{
+static enum ethernet_hw_caps e1000_caps(const struct device *dev) {
 	return
 #if IS_ENABLED(CONFIG_NET_VLAN)
 		ETHERNET_HW_VLAN |
 #endif
-		ETHERNET_LINK_10BASE_T | ETHERNET_LINK_100BASE_T |
-		ETHERNET_LINK_1000BASE_T;
+	ETHERNET_LINK_10BASE_T | ETHERNET_LINK_100BASE_T | ETHERNET_LINK_1000BASE_T;
 }
 
-static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len)
-{
+static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 	hexdump(buf, len, "%zu byte(s)", len);
 
-	dev->tx.addr = POINTER_TO_INT(buf);
-	dev->tx.len = len;
-	dev->tx.cmd = TDESC_EOP | TDESC_RS;
+	dev->ptx->addr = POINTER_TO_INT(buf);
+	dev->ptx->len = len;
+	dev->ptx->cmd = TDESC_EOP | TDESC_RS;
 
 	iow32(dev, TDT, 1);
 
-	while (!(dev->tx.sta)) {
+	while (!(dev->ptx->sta)) {
 		k_yield();
 	}
 
-	LOG_DBG("tx.sta: 0x%02hx", dev->tx.sta);
+	LOG_DBG("tx.sta: 0x%02hx", dev->ptx->sta);
 
-	return (dev->tx.sta & TDESC_STA_DD) ? 0 : -EIO;
+	return (dev->ptx->sta & TDESC_STA_DD) ? 0 : -EIO;
 }
 
-static int e1000_send(const struct device *ddev, struct net_pkt *pkt)
-{
+static int e1000_send(const struct device *ddev, struct net_pkt *pkt) {
 	struct e1000_dev *dev = ddev->data;
 	size_t len = net_pkt_get_len(pkt);
 
@@ -120,31 +123,30 @@ static int e1000_send(const struct device *ddev, struct net_pkt *pkt)
 	return e1000_tx(dev, dev->txb, len);
 }
 
-static struct net_pkt *e1000_rx(struct e1000_dev *dev)
-{
+static struct net_pkt* e1000_rx(struct e1000_dev *dev) {
 	struct net_pkt *pkt = NULL;
 	void *buf;
 	ssize_t len;
 
-	LOG_DBG("rx.sta: 0x%02hx", dev->rx.sta);
+	LOG_DBG("rx.sta: 0x%02hx", dev->prx->sta);
 
-	if (!(dev->rx.sta & RDESC_STA_DD)) {
+	if (!(dev->prx->sta & RDESC_STA_DD)) {
 		LOG_ERR("RX descriptor not ready");
 		goto out;
 	}
 
-	buf = INT_TO_POINTER((uint32_t)dev->rx.addr);
-	len = dev->rx.len - 4;
+	buf = INT_TO_POINTER((uint32_t )dev->prx->addr);
+	len = dev->prx->len - 4;
 
 	if (len <= 0) {
-		LOG_ERR("Invalid RX descriptor length: %hu", dev->rx.len);
+		LOG_ERR("Invalid RX descriptor length: %hu", dev->prx->len);
 		goto out;
 	}
 
 	hexdump(buf, len, "%zd byte(s)", len);
 
 	pkt = net_pkt_rx_alloc_with_buffer(dev->iface, len, AF_UNSPEC, 0,
-					   K_NO_WAIT);
+	K_NO_WAIT);
 	if (!pkt) {
 		LOG_ERR("Out of buffers");
 		goto out;
@@ -156,13 +158,11 @@ static struct net_pkt *e1000_rx(struct e1000_dev *dev)
 		pkt = NULL;
 	}
 
-out:
-	return pkt;
+	out: return pkt;
 }
 
-static void e1000_isr(const struct device *ddev)
-{
-	struct e1000_dev *dev = ddev->data;
+void e1000_isr(struct e1000_dev *dev) {
+//	struct e1000_dev *dev = ddev->data;
 	uint32_t icr = ior32(dev, ICR); /* Cleared upon read */
 	uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
 
@@ -210,44 +210,57 @@ static void e1000_isr(const struct device *ddev)
 #define PCI_VENDOR_ID_INTEL	0x8086
 #define PCI_DEVICE_ID_I82540EM	0x100e
 
-int e1000_probe(const struct device *ddev)
-{
-	const pcie_bdf_t bdf = PCIE_BDF(0, 3, 0);
+int e1000_probe(const struct device *ddev) {
+	const pcie_bdf_t bdf = 0x100;
 	struct e1000_dev *dev = ddev->data;
 	uint32_t ral, rah;
 	struct pcie_mbar mbar;
 
-	if (!pcie_probe(bdf, PCIE_ID(PCI_VENDOR_ID_INTEL,
-				     PCI_DEVICE_ID_I82540EM))) {
-		return -ENODEV;
-	}
+//	if (!pcie_probe(bdf, PCIE_ID(PCI_VENDOR_ID_INTEL,
+//				     PCI_DEVICE_ID_I82540EM))) {
+//		return -ENODEV;
+//	}
+	pcie_probe(0x100, PCIE_ID(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_I82540EM));
 
 	pcie_get_mbar(bdf, 0, &mbar);
 	pcie_set_cmd(bdf, PCIE_CONF_CMDSTAT_MEM |
-		     PCIE_CONF_CMDSTAT_MASTER, true);
+	PCIE_CONF_CMDSTAT_MASTER, true);
 
 	device_map(&dev->address, mbar.phys_addr, mbar.size,
-		   K_MEM_CACHE_NONE);
+	K_MEM_CACHE_NONE);
 
 	/* Setup TX descriptor */
 
-	iow32(dev, TDBAL, (uint32_t) &dev->tx);
-	iow32(dev, TDBAH, 0);
-	iow32(dev, TDLEN, 1*16);
+	k_heap_init(&h, pAmem, 16384);
+	dev->txb = k_heap_alloc(&h, 2048, K_NO_WAIT);
+	dev->rxb = k_heap_alloc(&h, 2048, K_NO_WAIT);
+
+	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16, K_NO_WAIT);
+	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, 16, K_NO_WAIT);
+
+	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx));
+	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
+	iow32(dev, TDLEN, 1 * 16);
 
 	iow32(dev, TDH, 0);
 	iow32(dev, TDT, 0);
 
 	iow32(dev, TCTL, TCTL_EN);
 
+	dev->ptx->addr = POINTER_TO_INT(dev->txb);
+	dev->ptx->len = 2048;
+
 	/* Setup RX descriptor */
 
-	dev->rx.addr = POINTER_TO_INT(dev->rxb);
-	dev->rx.len = sizeof(dev->rxb);
+	dev->prx->addr = POINTER_TO_INT(dev->rxb);
+//	dev->rx.len = sizeof(dev->rxb);
+	dev->prx->len = 2048;
 
-	iow32(dev, RDBAL, (uint32_t) &dev->rx);
-	iow32(dev, RDBAH, 0);
-	iow32(dev, RDLEN, 1*16);
+//	iow32(dev, RDBAL, (intptr_t) &dev->rx);
+//	iow32(dev, RDBAH, 0);
+	iow32(dev, RDBAL, 0xFFFFFFFF & ((uint64_t )dev->prx));
+	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx) >> 32)));
+	iow32(dev, RDLEN, 1 * 16);
 
 	iow32(dev, RDH, 0);
 	iow32(dev, RDT, 1);
@@ -263,8 +276,7 @@ int e1000_probe(const struct device *ddev)
 	return 0;
 }
 
-static void e1000_iface_init(struct net_if *iface)
-{
+static void e1000_iface_init(struct net_if *iface) {
 	struct e1000_dev *dev = net_if_get_device(iface)->data;
 
 	/* For VLAN, this value is only used to get the correct L2 driver.
@@ -275,37 +287,28 @@ static void e1000_iface_init(struct net_if *iface)
 		dev->iface = iface;
 
 		/* Do the phy link up only once */
-		IRQ_CONNECT(DT_INST_IRQN(0),
-			DT_INST_IRQ(0, priority),
-			e1000_isr, DEVICE_DT_INST_GET(0),
-			DT_INST_IRQ(0, sense));
-
-		irq_enable(DT_INST_IRQN(0));
+//       IRQ_CONNECT(DT_INST_IRQN(0),
+//                       7,
+//					   plda_pcie_isr, NULL,
+//                       0);
+//
+//		irq_enable(DT_INST_IRQN(0));
 		iow32(dev, CTRL, CTRL_SLU); /* Set link up */
 		iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
+
 	}
 
 	ethernet_init(iface);
 
-	net_if_set_link_addr(iface, dev->mac, sizeof(dev->mac),
-			     NET_LINK_ETHERNET);
+	net_if_set_link_addr(iface, dev->mac, sizeof(dev->mac), NET_LINK_ETHERNET);
 
 	LOG_DBG("done");
 }
 
-static struct e1000_dev e1000_dev;
+struct e1000_dev e1000_dev;
 
-static const struct ethernet_api e1000_api = {
-	.iface_api.init		= e1000_iface_init,
-	.get_capabilities	= e1000_caps,
-	.send			= e1000_send,
-};
+static const struct ethernet_api e1000_api = { .iface_api.init =
+		e1000_iface_init, .get_capabilities = e1000_caps, .send = e1000_send, };
 
-ETH_NET_DEVICE_DT_INST_DEFINE(0,
-		    e1000_probe,
-		    device_pm_control_nop,
-		    &e1000_dev,
-		    NULL,
-		    CONFIG_ETH_INIT_PRIORITY,
-		    &e1000_api,
-		    NET_ETH_MTU);
+ETH_NET_DEVICE_DT_INST_DEFINE(0, e1000_probe, device_pm_control_nop, &e1000_dev,
+		NULL, CONFIG_ETH_INIT_PRIORITY, &e1000_api, NET_ETH_MTU);

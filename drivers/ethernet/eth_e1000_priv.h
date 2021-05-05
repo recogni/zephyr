@@ -34,23 +34,24 @@ extern "C" {
 
 enum e1000_reg_t {
 	CTRL	= 0x0000,	/* Device Control */
-	ICR	= 0x00C0,	/* Interrupt Cause Read */
-	ICS	= 0x00C8,	/* Interrupt Cause Set */
-	IMS	= 0x00D0,	/* Interrupt Mask Set */
+	ICR	= 0x1500,	/* Interrupt Cause Read */
+	ICS	= 0x1504,	/* Interrupt Cause Set */
+	IMS	= 0x1508,	/* Interrupt Mask Set */
 	RCTL	= 0x0100,	/* Receive Control */
 	TCTL	= 0x0400,	/* Transmit Control */
-	RDBAL	= 0x2800,	/* Rx Descriptor Base Address Low */
-	RDBAH	= 0x2804,	/* Rx Descriptor Base Address High */
-	RDLEN	= 0x2808,	/* Rx Descriptor Length */
-	RDH	= 0x2810,	/* Rx Descriptor Head */
-	RDT	= 0x2818,	/* Rx Descriptor Tail */
-	TDBAL	= 0x3800,	/* Tx Descriptor Base Address Low */
-	TDBAH	= 0x3804,	/* Tx Descriptor Base Address High */
-	TDLEN	= 0x3808,	/* Tx Descriptor Length */
-	TDH	= 0x3810,	/* Tx Descriptor Head */
-	TDT	= 0x3818,	/* Tx Descriptor Tail */
+	RDBAL	= 0xC000,	/* Rx Descriptor Base Address Low */
+	RDBAH	= 0xC004,	/* Rx Descriptor Base Address High */
+	RDLEN	= 0xC008,	/* Rx Descriptor Length */
+	RDH	= 0xC010,	/* Rx Descriptor Head */
+	RDT	= 0xC018,	/* Rx Descriptor Tail */
+	TDBAL	= 0xE000,	/* Tx Descriptor Base Address Low */
+	TDBAH	= 0xE004,	/* Tx Descriptor Base Address High */
+	TDLEN	= 0xE008,	/* Tx Descriptor Length */
+	TDH	= 0xE010,	/* Tx Descriptor Head */
+	TDT	= 0xE018,	/* Tx Descriptor Tail */
 	RAL	= 0x5400,	/* Receive Address Low */
 	RAH	= 0x5404,	/* Receive Address High */
+	MCR	= 0x0052,	/* Receive Address High */
 };
 
 /* Legacy TX Descriptor */
@@ -75,8 +76,11 @@ struct e1000_rx {
 };
 
 struct e1000_dev {
-	volatile struct e1000_tx tx __aligned(16);
-	volatile struct e1000_rx rx __aligned(16);
+//	volatile struct e1000_tx tx __aligned(16);
+//	volatile struct e1000_rx rx __aligned(16);
+	struct e1000_tx *ptx;
+	struct e1000_rx *prx;
+
 	mm_reg_t address;
 	/* If VLAN is enabled, there can be multiple VLAN interfaces related to
 	 * this physical device. In that case, this iface pointer value is not
@@ -84,24 +88,41 @@ struct e1000_dev {
 	 */
 	struct net_if *iface;
 	uint8_t mac[ETH_ALEN];
-	uint8_t txb[NET_ETH_MTU];
-	uint8_t rxb[NET_ETH_MTU];
+	uint8_t *txb;
+	uint8_t *rxb;
 };
 
 static const char *e1000_reg_to_string(enum e1000_reg_t r)
 	__attribute__((unused));
 
+
+/*
 #define iow32(_dev, _reg, _val) do {					\
-	LOG_DBG("iow32 %s 0x%08x", e1000_reg_to_string(_reg), (_val)); 	\
+	LOG_DBG("iow32 %s 0x%08lx", e1000_reg_to_string(_reg), (_val)); 	\
 	sys_write32(_val, (_dev)->address + (_reg));			\
 } while (0)
+*/
+#define iow32(_dev, _reg, _val) do {					\
+	sys_write32(_val, (_dev)->address + (_reg));			\
+} while (0)
+
+
+/*
+#define ior32(_dev, _reg)						\
+({									\
+	uint32_t val = sys_read32((_dev)->address + (_reg));		\
+	LOG_DBG("ior32 %s 0x%08lx", e1000_reg_to_string(_reg), val); 	\
+	val;								\
+})
+
+*/
 
 #define ior32(_dev, _reg)						\
 ({									\
 	uint32_t val = sys_read32((_dev)->address + (_reg));		\
-	LOG_DBG("ior32 %s 0x%08x", e1000_reg_to_string(_reg), val); 	\
 	val;								\
 })
+
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,122 @@
+[1;32meth_sam_gmac.c[0m[K:[1;33m2388[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_sam_gmac.c[0m[K:[1;33m2402[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_sam_gmac.c[0m[K:[1;33m2414[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_sam_gmac.c[0m[K:[1;33m2447[0m[K:	struct eth_sam_dev_data *dev_data = eth_[30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m191[0m[K:	struct eth_context *eth_ctx = (struct eth_context *)[30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m655[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m910[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m911[0m[K:	const enet_buffer_config_t *buffer_config = [30;43mdev-[0m[K>config;
+[1;32meth_mcux.c[0m[K:[1;33m991[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1018[0m[K:		[30;43mdev-[0m[K>name,
+[1;32meth_mcux.c[0m[K:[1;33m1032[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1048[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1100[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1112[0m[K:			[30;43mdev-[0m[K>name,
+[1;32meth_mcux.c[0m[K:[1;33m1127[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1150[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1159[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1181[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1190[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1199[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1417[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1431[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1444[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1472[0m[K:	struct ptp_context *ptp_context = [30;43mdev-[0m[K>data;
+[1;32meth_mcux.c[0m[K:[1;33m1529[0m[K:	struct eth_context *context = eth_[30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m33[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m49[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m85[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m105[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m145[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m167[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m188[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m231[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m358[0m[K:	const struct eth_enc28j60_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc28j60.c[0m[K:[1;33m359[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m408[0m[K:	const struct eth_enc28j60_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc28j60.c[0m[K:[1;33m442[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m516[0m[K:	const struct eth_enc28j60_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc28j60.c[0m[K:[1;33m517[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m602[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m675[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m707[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc28j60.c[0m[K:[1;33m733[0m[K:	const struct eth_enc28j60_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc28j60.c[0m[K:[1;33m734[0m[K:	struct eth_enc28j60_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_e1000.c[0m[K:[1;33m96[0m[K:	[30;43mdev-[0m[K>tx.addr = POINTER_TO_INT(buf);
+[1;32meth_e1000.c[0m[K:[1;33m97[0m[K:	[30;43mdev-[0m[K>tx.len = len;
+[1;32meth_e1000.c[0m[K:[1;33m98[0m[K:	[30;43mdev-[0m[K>tx.cmd = TDESC_EOP | TDESC_RS;
+[1;32meth_e1000.c[0m[K:[1;33m102[0m[K:	while (!([30;43mdev-[0m[K>tx.sta)) {
+[1;32meth_e1000.c[0m[K:[1;33m106[0m[K:	LOG_DBG("tx.sta: 0x%02hx", [30;43mdev-[0m[K>tx.sta);
+[1;32meth_e1000.c[0m[K:[1;33m108[0m[K:	return ([30;43mdev-[0m[K>tx.sta & TDESC_STA_DD) ? 0 : -EIO;
+[1;32meth_e1000.c[0m[K:[1;33m113[0m[K:	struct e1000_dev *dev = d[30;43mdev-[0m[K>data;
+[1;32meth_e1000.c[0m[K:[1;33m116[0m[K:	if (net_pkt_read(pkt, [30;43mdev-[0m[K>txb, len)) {
+[1;32meth_e1000.c[0m[K:[1;33m120[0m[K:	return e1000_tx(dev, [30;43mdev-[0m[K>txb, len);
+[1;32meth_e1000.c[0m[K:[1;33m129[0m[K:	LOG_DBG("rx.sta: 0x%02hx", [30;43mdev-[0m[K>rx.sta);
+[1;32meth_e1000.c[0m[K:[1;33m131[0m[K:	if (!([30;43mdev-[0m[K>rx.sta & RDESC_STA_DD)) {
+[1;32meth_e1000.c[0m[K:[1;33m136[0m[K:	buf = INT_TO_POINTER((uint32_t)[30;43mdev-[0m[K>rx.addr);
+[1;32meth_e1000.c[0m[K:[1;33m137[0m[K:	len = [30;43mdev-[0m[K>rx.len - 4;
+[1;32meth_e1000.c[0m[K:[1;33m140[0m[K:		LOG_ERR("Invalid RX descriptor length: %hu", [30;43mdev-[0m[K>rx.len);
+[1;32meth_e1000.c[0m[K:[1;33m146[0m[K:	pkt = net_pkt_rx_alloc_with_buffer([30;43mdev-[0m[K>iface, len, AF_UNSPEC, 0,
+[1;32meth_e1000.c[0m[K:[1;33m165[0m[K:	struct e1000_dev *dev = d[30;43mdev-[0m[K>data;
+[1;32meth_e1000.c[0m[K:[1;33m216[0m[K:	struct e1000_dev *dev = d[30;43mdev-[0m[K>data;
+[1;32meth_e1000.c[0m[K:[1;33m229[0m[K:	device_map(&[30;43mdev-[0m[K>address, mbar.phys_addr, mbar.size,
+[1;32meth_e1000.c[0m[K:[1;33m234[0m[K:	iow32(dev, TDBAL, (uint32_t) &[30;43mdev-[0m[K>tx);
+[1;32meth_e1000.c[0m[K:[1;33m245[0m[K:	[30;43mdev-[0m[K>rx.addr = POINTER_TO_INT([30;43mdev-[0m[K>rxb);
+[1;32meth_e1000.c[0m[K:[1;33m246[0m[K:	[30;43mdev-[0m[K>rx.len = sizeof([30;43mdev-[0m[K>rxb);
+[1;32meth_e1000.c[0m[K:[1;33m248[0m[K:	iow32(dev, RDBAL, (uint32_t) &[30;43mdev-[0m[K>rx);
+[1;32meth_e1000.c[0m[K:[1;33m260[0m[K:	memcpy([30;43mdev-[0m[K>mac, &ral, 4);
+[1;32meth_e1000.c[0m[K:[1;33m261[0m[K:	memcpy([30;43mdev-[0m[K>mac + 4, &rah, 2);
+[1;32meth_e1000.c[0m[K:[1;33m274[0m[K:	if ([30;43mdev-[0m[K>iface == NULL) {
+[1;32meth_e1000.c[0m[K:[1;33m275[0m[K:		[30;43mdev-[0m[K>iface = iface;
+[1;32meth_e1000.c[0m[K:[1;33m290[0m[K:	net_if_set_link_addr(iface, [30;43mdev-[0m[K>mac, sizeof([30;43mdev-[0m[K>mac),
+[1;32mdsa_ksz8794.c[0m[K:[1;33m44[0m[K:	spi_write(s[30;43mdev-[0m[K>spi, &s[30;43mdev-[0m[K>spi_cfg, &tx);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m74[0m[K:	if (!spi_transceive(s[30;43mdev-[0m[K>spi, &s[30;43mdev-[0m[K>spi_cfg, &tx, &rx)) {
+[1;32mdsa_ksz8794.c[0m[K:[1;33m128[0m[K:	s[30;43mdev-[0m[K>spi_cfg.operation =
+[1;32mdsa_ksz8794.c[0m[K:[1;33m137[0m[K:	s[30;43mdev-[0m[K>spi_cfg.frequency = DT_INST_PROP(0, spi_max_frequency);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m138[0m[K:	s[30;43mdev-[0m[K>spi_cfg.slave = DT_INST_REG_ADDR(0);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m140[0m[K:	s[30;43mdev-[0m[K>cs_ctrl.gpio_dev =
+[1;32mdsa_ksz8794.c[0m[K:[1;33m142[0m[K:	s[30;43mdev-[0m[K>cs_ctrl.gpio_pin = DT_INST_SPI_DEV_CS_GPIOS_PIN(0);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m143[0m[K:	s[30;43mdev-[0m[K>cs_ctrl.gpio_dt_flags = DT_INST_SPI_DEV_CS_GPIOS_FLAGS(0);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m144[0m[K:	s[30;43mdev-[0m[K>cs_ctrl.delay = 0U;
+[1;32mdsa_ksz8794.c[0m[K:[1;33m145[0m[K:	s[30;43mdev-[0m[K>spi_cfg.cs = &(s[30;43mdev-[0m[K>cs_ctrl);
+[1;32mdsa_ksz8794.c[0m[K:[1;33m147[0m[K:	s[30;43mdev-[0m[K>spi_cfg.cs = NULL;
+[1;32mdsa_ksz8794.c[0m[K:[1;33m149[0m[K:	s[30;43mdev-[0m[K>spi = device_get_binding(DT_INST_BUS_LABEL(0));
+[1;32mdsa_ksz8794.c[0m[K:[1;33m150[0m[K:	if (!s[30;43mdev-[0m[K>spi) {
+[1;32mdsa_ksz8794.c[0m[K:[1;33m930[0m[K:	struct dsa_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_liteeth.c[0m[K:[1;33m76[0m[K:	const struct eth_liteeth_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_liteeth.c[0m[K:[1;33m87[0m[K:	struct eth_liteeth_dev_data *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m183[0m[K:	struct eth_context *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m521[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m530[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m544[0m[K:		struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m583[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m597[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_native_posix.c[0m[K:[1;33m721[0m[K:		struct eth_context *context = eth_[30;43mdev-[0m[K>data;	\
+[1;32meth_w5500.c[0m[K:[1;33m41[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m81[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m180[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m221[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m222[0m[K:	const struct w5500_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_w5500.c[0m[K:[1;33m287[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m317[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m435[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_w5500.c[0m[K:[1;33m474[0m[K:	const struct w5500_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_w5500.c[0m[K:[1;33m475[0m[K:	struct w5500_runtime *ctx = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m28[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m45[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m67[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m100[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m161[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m187[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m309[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m348[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m349[0m[K:	const struct enc424j600_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc424j600.c[0m[K:[1;33m505[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m519[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m549[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_enc424j600.c[0m[K:[1;33m598[0m[K:	const struct enc424j600_config *config = [30;43mdev-[0m[K>config;
+[1;32meth_enc424j600.c[0m[K:[1;33m599[0m[K:	struct enc424j600_runtime *context = [30;43mdev-[0m[K>data;
+[1;32meth_smsc911x.c[0m[K:[1;33m424[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_smsc911x.c[0m[K:[1;33m433[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_smsc911x.c[0m[K:[1;33m559[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;
+[1;32meth_smsc911x.c[0m[K:[1;33m599[0m[K:	struct eth_context *context = [30;43mdev-[0m[K>data;

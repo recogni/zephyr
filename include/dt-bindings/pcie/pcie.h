@@ -49,12 +49,12 @@
  * of this shared format to avoid unnecessary layers of abstraction.
  */
 
-#define PCIE_BDF_BUS_SHIFT	16U
-#define PCIE_BDF_BUS_MASK	0xFFU
-#define PCIE_BDF_DEV_SHIFT	11U
-#define PCIE_BDF_DEV_MASK	0x1FU
-#define PCIE_BDF_FUNC_SHIFT	8U
-#define PCIE_BDF_FUNC_MASK	0x7U
+#define PCIE_BDF_BUS_SHIFT     8U
+#define PCIE_BDF_BUS_MASK      0xFFU
+#define PCIE_BDF_DEV_SHIFT     3U
+#define PCIE_BDF_DEV_MASK      0x1FU
+#define PCIE_BDF_FUNC_SHIFT    0U
+#define PCIE_BDF_FUNC_MASK     0x7U
 
 #define PCIE_BDF(bus, dev, func) \
 	((((bus) & PCIE_BDF_BUS_MASK) << PCIE_BDF_BUS_SHIFT) | \

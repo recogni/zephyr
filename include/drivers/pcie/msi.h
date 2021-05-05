@@ -24,6 +24,13 @@ struct msix_vector {
 	uint32_t vector_ctrl;
 };
 
+struct scorpio_msi_vector {
+        unsigned int irq;
+        uint8_t vector;
+};
+
+typedef struct scorpio_msi_vector arch_msi_vector_t;
+
 struct msi_vector {
 	pcie_bdf_t bdf;
 	arch_msi_vector_t arch;
