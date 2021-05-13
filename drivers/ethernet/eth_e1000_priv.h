@@ -23,6 +23,7 @@ extern "C" {
 #define IMS_RXO		(1 << 6) /* Receiver FIFO Overrun */
 
 #define RCTL_MPE	(1 << 4) /* Multicast Promiscuous Enabled */
+#define RCTL_SBP	(1 << 2) /* Store Bad Packets */
 
 #define TDESC_EOP	     (1) /* End Of Packet */
 #define TDESC_RS	(1 << 3) /* Report Status */
@@ -34,24 +35,24 @@ extern "C" {
 
 enum e1000_reg_t {
 	CTRL	= 0x0000,	/* Device Control */
-	ICR	= 0x1500,	/* Interrupt Cause Read */
-	ICS	= 0x1504,	/* Interrupt Cause Set */
-	IMS	= 0x1508,	/* Interrupt Mask Set */
+	ICR	= 0x00C0,	/* Interrupt Cause Read */
+	ICS	= 0x00C8,	/* Interrupt Cause Set */
+	IMS	= 0x00D0,	/* Interrupt Mask Set */
 	RCTL	= 0x0100,	/* Receive Control */
 	TCTL	= 0x0400,	/* Transmit Control */
-	RDBAL	= 0xC000,	/* Rx Descriptor Base Address Low */
-	RDBAH	= 0xC004,	/* Rx Descriptor Base Address High */
-	RDLEN	= 0xC008,	/* Rx Descriptor Length */
-	RDH	= 0xC010,	/* Rx Descriptor Head */
-	RDT	= 0xC018,	/* Rx Descriptor Tail */
-	TDBAL	= 0xE000,	/* Tx Descriptor Base Address Low */
-	TDBAH	= 0xE004,	/* Tx Descriptor Base Address High */
-	TDLEN	= 0xE008,	/* Tx Descriptor Length */
-	TDH	= 0xE010,	/* Tx Descriptor Head */
-	TDT	= 0xE018,	/* Tx Descriptor Tail */
+	RDBAL	= 0x2800,	/* Rx Descriptor Base Address Low */
+	RDBAH	= 0x2804,	/* Rx Descriptor Base Address High */
+	RDLEN	= 0x2808,	/* Rx Descriptor Length */
+	RDH	= 0x2810,	/* Rx Descriptor Head */
+	RDT	= 0x2818,	/* Rx Descriptor Tail */
+	TDBAL	= 0x3800,	/* Tx Descriptor Base Address Low */
+	TDBAH	= 0x3804,	/* Tx Descriptor Base Address High */
+	TDLEN	= 0x3808,	/* Tx Descriptor Length */
+	TDH	= 0x3810,	/* Tx Descriptor Head */
+	TDT	= 0x3818,	/* Tx Descriptor Tail */
 	RAL	= 0x5400,	/* Receive Address Low */
 	RAH	= 0x5404,	/* Receive Address High */
-	MCR	= 0x0052,	/* Receive Address High */
+	MCR	= 0x0052,
 };
 
 /* Legacy TX Descriptor */
@@ -78,8 +79,8 @@ struct e1000_rx {
 struct e1000_dev {
 //	volatile struct e1000_tx tx __aligned(16);
 //	volatile struct e1000_rx rx __aligned(16);
-	struct e1000_tx *ptx;
-	struct e1000_rx *prx;
+	struct e1000_tx *ptx[8];
+	struct e1000_rx *prx[8];
 
 	mm_reg_t address;
 	/* If VLAN is enabled, there can be multiple VLAN interfaces related to
@@ -88,8 +89,8 @@ struct e1000_dev {
 	 */
 	struct net_if *iface;
 	uint8_t mac[ETH_ALEN];
-	uint8_t *txb;
-	uint8_t *rxb;
+	uint8_t *txb[8];
+	uint8_t *rxb[8];
 };
 
 static const char *e1000_reg_to_string(enum e1000_reg_t r)

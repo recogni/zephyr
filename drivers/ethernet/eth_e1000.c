@@ -20,6 +20,12 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #include "eth_e1000_priv.h"
 
+uint8_t tail_rx_desc = 0;
+uint8_t curr_rx_desc = 0;
+
+uint8_t tail_tx_desc = 0;
+uint8_t curr_tx_desc = 0;
+
 extern void plda_pcie_isr(const struct device *ddev);
 
 void *pAmem = ((void*) (SCORPIO_NOC_AMEM_DMA_ADDRESS
@@ -97,19 +103,25 @@ static enum ethernet_hw_caps e1000_caps(const struct device *dev) {
 static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 	hexdump(buf, len, "%zu byte(s)", len);
 
-	dev->ptx->addr = POINTER_TO_INT(buf);
-	dev->ptx->len = len;
-	dev->ptx->cmd = TDESC_EOP | TDESC_RS;
+	dev->ptx[curr_tx_desc]->addr = POINTER_TO_INT(buf);
+	dev->ptx[curr_tx_desc]->len = len;
+	dev->ptx[curr_tx_desc]->cmd = TDESC_EOP | TDESC_RS;
 
-	iow32(dev, TDT, 1);
+	iow32(dev, TDT, tail_tx_desc);
 
-	while (!(dev->ptx->sta)) {
+	while (!(dev->ptx[curr_tx_desc]->sta)) {
 		k_yield();
 	}
 
-	LOG_DBG("tx.sta: 0x%02hx", dev->ptx->sta);
+	LOG_DBG("tx.sta: 0x%02hx", dev->ptx[curr_tx_desc]->sta);
 
-	return (dev->ptx->sta & TDESC_STA_DD) ? 0 : -EIO;
+	if (dev->ptx[curr_tx_desc]->sta & TDESC_STA_DD) {
+		curr_tx_desc = tail_tx_desc;
+		tail_tx_desc++;
+		tail_tx_desc %= 8;
+		return 0;
+	}
+	return -EIO;
 }
 
 static int e1000_send(const struct device *ddev, struct net_pkt *pkt) {
@@ -128,22 +140,27 @@ static struct net_pkt* e1000_rx(struct e1000_dev *dev) {
 	void *buf;
 	ssize_t len;
 
-	LOG_DBG("rx.sta: 0x%02hx", dev->prx->sta);
+	LOG_DBG("rx.sta: 0x%02hx", dev->prx[curr_rx_desc]->sta);
 
-	if (!(dev->prx->sta & RDESC_STA_DD)) {
+	if (!(dev->prx[curr_rx_desc]->sta & RDESC_STA_DD)) {
 		LOG_ERR("RX descriptor not ready");
 		goto out;
 	}
 
-	buf = INT_TO_POINTER((uint32_t )dev->prx->addr);
-	len = dev->prx->len - 4;
+	buf = INT_TO_POINTER((uint32_t )dev->prx[curr_rx_desc]->addr);
+	len = dev->prx[curr_rx_desc]->len - 4;
 
 	if (len <= 0) {
-		LOG_ERR("Invalid RX descriptor length: %hu", dev->prx->len);
+		LOG_ERR("Invalid RX descriptor length: %hu",
+				dev->prx[curr_rx_desc]->len);
 		goto out;
 	}
 
 	hexdump(buf, len, "%zd byte(s)", len);
+
+	curr_rx_desc = tail_rx_desc;
+	tail_rx_desc++;
+	tail_rx_desc %= 8;
 
 	pkt = net_pkt_rx_alloc_with_buffer(dev->iface, len, AF_UNSPEC, 0,
 	K_NO_WAIT);
@@ -197,6 +214,8 @@ void e1000_isr(struct e1000_dev *dev) {
 #endif /* CONFIG_NET_VLAN */
 
 			net_recv_data(get_iface(dev, vlan_tag), pkt);
+			iow32(dev, RDT, tail_rx_desc);
+
 		} else {
 			eth_stats_update_errors_rx(get_iface(dev, vlan_tag));
 		}
@@ -205,6 +224,7 @@ void e1000_isr(struct e1000_dev *dev) {
 	if (icr) {
 		LOG_ERR("Unhandled interrupt, ICR: 0x%x", icr);
 	}
+
 }
 
 #define PCI_VENDOR_ID_INTEL	0x8086
@@ -226,44 +246,52 @@ int e1000_probe(const struct device *ddev) {
 	pcie_set_cmd(bdf, PCIE_CONF_CMDSTAT_MEM |
 	PCIE_CONF_CMDSTAT_MASTER, true);
 
+	mbar.phys_addr = 0x10858000000;
+	mbar.size = 0x20000;
 	device_map(&dev->address, mbar.phys_addr, mbar.size,
 	K_MEM_CACHE_NONE);
 
 	/* Setup TX descriptor */
 
-	k_heap_init(&h, pAmem, 16384);
-	dev->txb = k_heap_alloc(&h, 2048, K_NO_WAIT);
-	dev->rxb = k_heap_alloc(&h, 2048, K_NO_WAIT);
+	k_heap_init(&h, pAmem, 65536);
+//	dev->txb = k_heap_alloc(&h, 2048, K_NO_WAIT);
+//	dev->rxb = k_heap_alloc(&h, 2048, K_NO_WAIT);
+	for (int i = 0; i < 8; i++) {
+		dev->txb[i] = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
+		dev->rxb[i] = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
+	}
 
-	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16, K_NO_WAIT);
-	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, 16, K_NO_WAIT);
+//	dev->rxb = 0x8D0010C00;
+	for (int i = 0; i < 8; i++) {
+		dev->ptx[i] = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16,
+		K_NO_WAIT);
+		dev->prx[i] = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, 16,
+		K_NO_WAIT);
+		dev->ptx[i]->addr = POINTER_TO_INT(dev->txb[i]) & 0xFFFFFFFFFF;
+		dev->ptx[i]->len = 2048;
+		dev->prx[i]->addr = POINTER_TO_INT(dev->rxb[i]) & 0xFFFFFFFFFF;
+		dev->prx[i]->len = 2048;
 
-	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx));
-	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
-	iow32(dev, TDLEN, 1 * 16);
+	}
+
+	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx[0]));
+	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx[0]) >> 32)));
+	iow32(dev, TDLEN, (8 * 16));
 
 	iow32(dev, TDH, 0);
-	iow32(dev, TDT, 0);
-
-	iow32(dev, TCTL, TCTL_EN);
-
-	dev->ptx->addr = POINTER_TO_INT(dev->txb);
-	dev->ptx->len = 2048;
-
-	/* Setup RX descriptor */
-
-	dev->prx->addr = POINTER_TO_INT(dev->rxb);
-//	dev->rx.len = sizeof(dev->rxb);
-	dev->prx->len = 2048;
+	iow32(dev, TDT, tail_tx_desc);
+	tail_tx_desc++;
 
 //	iow32(dev, RDBAL, (intptr_t) &dev->rx);
 //	iow32(dev, RDBAH, 0);
-	iow32(dev, RDBAL, 0xFFFFFFFF & ((uint64_t )dev->prx));
-	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx) >> 32)));
-	iow32(dev, RDLEN, 1 * 16);
+	iow32(dev, RDBAL, 0xFFFFFFFF & ((uint64_t )dev->prx[0]));
+	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx[0]) >> 32)));
+	iow32(dev, RDLEN, (8 * 16));
 
 	iow32(dev, RDH, 0);
-	iow32(dev, RDT, 1);
+//	tail_rx_desc++;
+	tail_rx_desc=5;
+	iow32(dev, RDT, tail_rx_desc);
 
 	iow32(dev, IMS, IMS_RXO);
 
@@ -294,7 +322,8 @@ static void e1000_iface_init(struct net_if *iface) {
 //
 //		irq_enable(DT_INST_IRQN(0));
 		iow32(dev, CTRL, CTRL_SLU); /* Set link up */
-		iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
+		iow32(dev, RCTL, RCTL_EN | RCTL_MPE | RCTL_SBP);
+//		iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
 
 	}
 
