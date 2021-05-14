@@ -79,8 +79,8 @@ struct e1000_rx {
 struct e1000_dev {
 //	volatile struct e1000_tx tx __aligned(16);
 //	volatile struct e1000_rx rx __aligned(16);
-	struct e1000_tx *ptx[8];
-	struct e1000_rx *prx[8];
+	struct e1000_tx *ptx;
+	struct e1000_rx *prx;
 
 	mm_reg_t address;
 	/* If VLAN is enabled, there can be multiple VLAN interfaces related to
@@ -89,8 +89,11 @@ struct e1000_dev {
 	 */
 	struct net_if *iface;
 	uint8_t mac[ETH_ALEN];
-	uint8_t *txb[8];
-	uint8_t *rxb[8];
+	uint8_t *txb;
+	uint8_t *rxb;
+	uint8_t scpu_txb[NET_ETH_MTU];
+    uint8_t scpu_rxb[NET_ETH_MTU];
+
 };
 
 static const char *e1000_reg_to_string(enum e1000_reg_t r)
