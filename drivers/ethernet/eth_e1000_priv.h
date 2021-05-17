@@ -50,9 +50,9 @@ enum e1000_reg_t {
 	TDLEN	= 0x3808,	/* Tx Descriptor Length */
 	TDH	= 0x3810,	/* Tx Descriptor Head */
 	TDT	= 0x3818,	/* Tx Descriptor Tail */
+	TXDCTL = 0x3828, /*Tx Desc control */
 	RAL	= 0x5400,	/* Receive Address Low */
 	RAH	= 0x5404,	/* Receive Address High */
-	MCR	= 0x0052,
 };
 
 /* Legacy TX Descriptor */

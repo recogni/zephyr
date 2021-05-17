@@ -61,7 +61,7 @@ static const char* e1000_reg_to_string(enum e1000_reg_t r) {
 		_(TDT);
 		_(RAL);
 		_(RAH);
-		_(MCR);
+		_(TXDCTL);
 	}
 #undef _
 	LOG_ERR("Unsupported register: 0x%x", r);
@@ -251,7 +251,7 @@ int e1000_probe(const struct device *ddev) {
 	dev->txb = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
 	dev->rxb = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
 
-//	dev->rxb = 0x8D0010C00;
+	/*	dev->rxb = 0x8D0010C00; if multi translation tables used */
 	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16,
 	K_NO_WAIT);
 	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, 16,
@@ -269,6 +269,9 @@ int e1000_probe(const struct device *ddev) {
 	iow32(dev, TDH, 0);
 	iow32(dev, TDT, 0);
 	iow32(dev, TCTL, TCTL_EN);
+	ral = ior32(dev, TXDCTL);
+	ral |= 0x1000000; // turn on GRAN
+	iow32(dev, TXDCTL, ral);
 
 //	iow32(dev, RDBAL, (intptr_t) &dev->rx);
 //	iow32(dev, RDBAH, 0);
