@@ -96,6 +96,9 @@ struct e1000_dev {
 	uint8_t scpu_txb[NET_ETH_MTU];
 	uint8_t scpu_rxb[NET_ETH_MTU];
 
+	uint8_t rdlen;
+	uint8_t rdh;
+	uint8_t rdt;
 };
 
 static const char* e1000_reg_to_string(enum e1000_reg_t r)

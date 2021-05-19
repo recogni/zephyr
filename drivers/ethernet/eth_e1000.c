@@ -136,19 +136,19 @@ static struct net_pkt* e1000_rx(struct e1000_dev *dev) {
 	void *buf;
 	ssize_t len;
 
-	LOG_DBG("rx.sta: 0x%02hx", dev->prx->sta);
+	LOG_DBG("rx.sta: 0x%02hx", dev->prx[dev->rdh].sta);
 
-	if (!(dev->prx->sta & RDESC_STA_DD)) {
+	if (!(dev->prx[dev->rdh].sta & RDESC_STA_DD)) {
 		LOG_ERR("RX descriptor not ready");
 		goto out;
 	}
 
-	memcpy(dev->scpu_rxb, dev->rxb, dev->prx->len);
+	memcpy(dev->scpu_rxb, dev->rxb, dev->prx[dev->rdh].len);
 	buf = INT_TO_POINTER(dev->scpu_rxb);
-	len = dev->prx->len - 4;
+	len = dev->prx[dev->rdh].len - 4;
 
 	if (len <= 0) {
-		LOG_ERR("Invalid RX descriptor length: %hu", dev->prx->len);
+		LOG_ERR("Invalid RX descriptor length: %hu", dev->prx[dev->rdh].len);
 		goto out;
 	}
 
@@ -205,15 +205,23 @@ void e1000_isr(struct e1000_dev *dev) {
 #endif /* CONFIG_NET_VLAN */
 
 			net_recv_data(get_iface(dev, vlan_tag), pkt);
+#if 0
 			iow32(dev, RCTL, 0);
 			iow32(dev, RDH, 0);
 			iow32(dev, RDT, 0);
 			//iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
-	                dev->prx->sta = 0;
-	                dev->prx->len = 2048;
-	                iow32(dev, IMS, IMS_RXO | IMS_RXT0);
+            dev->prx[dev->rdh].sta = 0;
+            dev->prx[dev->rdh].len = 2048;
+            iow32(dev, IMS, IMS_RXO | IMS_RXT0);
 			iow32(dev, RCTL, RCTL_EN );
 			iow32(dev, RDT, 1);
+#else
+			dev->rdh = (dev->rdh + 1) % dev->rdlen;
+			dev->prx[dev->rdt].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
+			dev->prx[dev->rdt].sta = 0;
+			dev->rdt = (dev->rdt + 1) % dev->rdlen;
+			iow32(dev, RDT, dev->rdt);
+#endif
 		} else {
 			eth_stats_update_errors_rx(get_iface(dev, vlan_tag));
 		}
@@ -251,6 +259,10 @@ int e1000_probe(const struct device *ddev) {
 
 	/* Setup TX descriptor */
 
+	dev->rdlen = 8;
+	dev->rdh = 0;
+	dev->rdt = (dev->rdh + 1) % dev->rdlen;
+
 	k_heap_init(&h, pAmem, 65536);
 //	dev->txb = k_heap_alloc(&h, 2048, K_NO_WAIT);
 //	dev->rxb = k_heap_alloc(&h, 2048, K_NO_WAIT);
@@ -260,13 +272,13 @@ int e1000_probe(const struct device *ddev) {
 	/*	dev->rxb = 0x8D0010C00; if multi translation tables used */
 	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16,
 	K_NO_WAIT);
-	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, 16,
+	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, (dev->rdlen * 16),
 	K_NO_WAIT);
 
 	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
 	dev->ptx->len = 2048;
-	dev->prx->addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
-	dev->prx->len = 2048;
+	dev->prx[dev->rdh].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
+	dev->prx[dev->rdh].sta = 0;
 
 	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx));
 	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
@@ -291,11 +303,11 @@ int e1000_probe(const struct device *ddev) {
 //	iow32(dev, RDBAH, 0);
 	iow32(dev, RDBAL, 0xFFFFFFFF & ((uint64_t )dev->prx));
 	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx) >> 32)));
-	iow32(dev, RDLEN, (8 * 16));
+	iow32(dev, RDLEN, (dev->rdlen * 16));
 
 	iow32(dev, RCTL, 0);
-	iow32(dev, RDH, 0);
-	iow32(dev, RDT, 1);
+	iow32(dev, RDH, dev->rdh);
+	iow32(dev, RDT, dev->rdt);
 
 	iow32(dev, IMS, IMS_RXO | IMS_RXT0);
 
