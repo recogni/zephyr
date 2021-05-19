@@ -219,6 +219,7 @@ void e1000_isr(struct e1000_dev *dev) {
 			dev->rdh = (dev->rdh + 1) % dev->rdlen;
 			dev->prx[dev->rdt].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
 			dev->prx[dev->rdt].sta = 0;
+			dev->prx[dev->rdt].len = 2048;
 			dev->rdt = (dev->rdt + 1) % dev->rdlen;
 			iow32(dev, RDT, dev->rdt);
 #endif
@@ -277,8 +278,12 @@ int e1000_probe(const struct device *ddev) {
 
 	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
 	dev->ptx->len = 2048;
-	dev->prx[dev->rdh].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
-	dev->prx[dev->rdh].sta = 0;
+
+	for(int i =0; i<dev->rdlen; i++){
+		dev->prx[i].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
+		dev->prx[i].len = 2047;
+		dev->prx[i].sta = 0;
+	}
 
 	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx));
 	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
@@ -296,7 +301,6 @@ int e1000_probe(const struct device *ddev) {
 
 	iow32(dev, TCTL, TCTL_EN);
 	ral = ior32(dev, TXDCTL);
-	ral |= 0x1000000; // turn on GRAN
 	iow32(dev, TXDCTL, ral);
 
 //	iow32(dev, RDBAL, (intptr_t) &dev->rx);
