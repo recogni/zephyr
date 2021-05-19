@@ -99,6 +99,10 @@ struct e1000_dev {
 	uint8_t rdlen;
 	uint8_t rdh;
 	uint8_t rdt;
+
+	uint8_t tdlen;
+	uint8_t tdh;
+	uint8_t tdt;
 };
 
 static const char* e1000_reg_to_string(enum e1000_reg_t r)

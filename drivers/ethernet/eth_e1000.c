@@ -98,21 +98,21 @@ static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 	hexdump(buf, len, "%zu byte(s)", len);
 
 	memcpy(dev->txb, buf, len);
-	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
-	dev->ptx->len = len;
-	dev->ptx->cmd = TDESC_EOP | TDESC_RS | TDESC_IFCS ;
-	dev->ptx->sta=0;
-	iow32(dev, TDT, 1);
+	uint8_t tdt = dev->tdt;
+	dev->ptx[tdt].addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
+	dev->ptx[tdt].len = len;
+	dev->ptx[tdt].cmd = TDESC_EOP | TDESC_RS | TDESC_IFCS ;
+	dev->ptx[tdt].sta = 0;
+	dev->tdt = (dev->tdt + 1) % dev->tdlen;
+	iow32(dev, TDT, dev->tdt);
 
-	while (!(dev->ptx->sta)) {
+	while (!(dev->ptx[tdt].sta)) {
 		k_yield();
 	}
 
-	LOG_DBG("tx.sta: 0x%02hx", dev->ptx->sta);
+	LOG_DBG("tx.sta: 0x%02hx", dev->ptx[tdt].sta);
 
-	if (dev->ptx->sta & TDESC_STA_DD) {
-		iow32(dev, TDH, 0);
-		iow32(dev, TDT, 0);
+	if (dev->ptx[tdt].sta & TDESC_STA_DD) {
 		return 0;
 	}
 
@@ -259,9 +259,11 @@ int e1000_probe(const struct device *ddev) {
 
 	/* Setup TX descriptor */
 
-	dev->rdlen = 8;
+	dev->rdlen = dev->tdlen = 8;
 	dev->rdh = 0;
 	dev->rdt = (dev->rdh + 1) % dev->rdlen;
+	dev->tdh = 0;
+	dev->tft = 0;
 
 	k_heap_init(&h, pAmem, 65536);
 //	dev->txb = k_heap_alloc(&h, 2048, K_NO_WAIT);
@@ -270,13 +272,13 @@ int e1000_probe(const struct device *ddev) {
 	dev->rxb = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
 
 	/*	dev->rxb = 0x8D0010C00; if multi translation tables used */
-	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, 16,
+	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128, (dev->tdlen * 16),
 	K_NO_WAIT);
 	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128, (dev->rdlen * 16),
 	K_NO_WAIT);
 
-	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
-	dev->ptx->len = 2048;
+	dev->ptx[0].addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
+	dev->ptx[0].len = 2048;
 
 	for(int i =0; i<dev->rdlen; i++){
 		dev->prx[i].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
@@ -286,11 +288,11 @@ int e1000_probe(const struct device *ddev) {
 
 	iow32(dev, TDBAL, 0xFFFFFFFF & ((uint64_t )dev->ptx));
 	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
-	iow32(dev, TDLEN, (8 * 16));
+	iow32(dev, TDLEN, (dev->tdlen * 16));
 
 	iow32(dev, TCTL, 0); // disable Tx
-	iow32(dev, TDH, 0);
-	iow32(dev, TDT, 0);
+	iow32(dev, TDH, dev->tdh);
+	iow32(dev, TDT, dev->tdt);
 
 	// debug
 	iow32(dev, 0xC4, 0x1); // minimum value
