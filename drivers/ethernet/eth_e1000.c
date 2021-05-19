@@ -99,10 +99,9 @@ static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 
 	memcpy(dev->txb, buf, len);
 	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
-//	dev->ptx->len = len;
-	dev->ptx->len = 100;
-	dev->ptx->cmd = TDESC_EOP | TDESC_RS ;
-
+	dev->ptx->len = len;
+	dev->ptx->cmd = TDESC_EOP | TDESC_RS | TDESC_IFCS ;
+	dev->ptx->sta=0;
 	iow32(dev, TDT, 1);
 
 	while (!(dev->ptx->sta)) {
@@ -299,7 +298,7 @@ int e1000_probe(const struct device *ddev) {
 	iow32(dev, 0x0282C, 0x1); // minimum value
 
 
-	iow32(dev, TCTL, TCTL_EN);
+	iow32(dev, TCTL, TCTL_EN | 0x8); // PSP field for padding
 	ral = ior32(dev, TXDCTL);
 	iow32(dev, TXDCTL, ral);
 
