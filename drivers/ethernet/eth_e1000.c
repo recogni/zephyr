@@ -99,8 +99,9 @@ static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 
 	memcpy(dev->txb, buf, len);
 	dev->ptx->addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
-	dev->ptx->len = len;
-	dev->ptx->cmd = TDESC_EOP | TDESC_RS;
+//	dev->ptx->len = len;
+	dev->ptx->len = 100;
+	dev->ptx->cmd = TDESC_EOP | TDESC_RS ;
 
 	iow32(dev, TDT, 1);
 
@@ -110,10 +111,9 @@ static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 
 	LOG_DBG("tx.sta: 0x%02hx", dev->ptx->sta);
 
-	iow32(dev, TDH, 0);
-	iow32(dev, TDT, 0);
-
 	if (dev->ptx->sta & TDESC_STA_DD) {
+		iow32(dev, TDH, 0);
+		iow32(dev, TDT, 0);
 		return 0;
 	}
 
@@ -176,10 +176,10 @@ void e1000_isr(struct e1000_dev *dev) {
 
 	icr &= ~(ICR_TXDW | ICR_TXQE);
 
-	if (icr & ICR_RXO) {
+	if (icr & ICR_RXO || icr & ICR_RXT0  ) {
 		struct net_pkt *pkt = e1000_rx(dev);
 
-		icr &= ~ICR_RXO;
+		icr &= ~(ICR_RXT0 | ICR_RXO);
 
 		if (pkt) {
 #if defined(CONFIG_NET_VLAN)
@@ -205,9 +205,15 @@ void e1000_isr(struct e1000_dev *dev) {
 #endif /* CONFIG_NET_VLAN */
 
 			net_recv_data(get_iface(dev, vlan_tag), pkt);
+			iow32(dev, RCTL, 0);
 			iow32(dev, RDH, 0);
+			iow32(dev, RDT, 0);
+			//iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
+	                dev->prx->sta = 0;
+	                dev->prx->len = 2048;
+	                iow32(dev, IMS, IMS_RXO | IMS_RXT0);
+			iow32(dev, RCTL, RCTL_EN );
 			iow32(dev, RDT, 1);
-
 		} else {
 			eth_stats_update_errors_rx(get_iface(dev, vlan_tag));
 		}
@@ -266,8 +272,16 @@ int e1000_probe(const struct device *ddev) {
 	iow32(dev, TDBAH, (0xFF & ((uint64_t )(dev->ptx) >> 32)));
 	iow32(dev, TDLEN, (8 * 16));
 
+	iow32(dev, TCTL, 0); // disable Tx
 	iow32(dev, TDH, 0);
 	iow32(dev, TDT, 0);
+
+	// debug
+	iow32(dev, 0xC4, 0x1); // minimum value
+	// RADV
+	iow32(dev, 0x0282C, 0x1); // minimum value
+
+
 	iow32(dev, TCTL, TCTL_EN);
 	ral = ior32(dev, TXDCTL);
 	ral |= 0x1000000; // turn on GRAN
@@ -279,10 +293,11 @@ int e1000_probe(const struct device *ddev) {
 	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx) >> 32)));
 	iow32(dev, RDLEN, (8 * 16));
 
+	iow32(dev, RCTL, 0);
 	iow32(dev, RDH, 0);
 	iow32(dev, RDT, 1);
 
-	iow32(dev, IMS, IMS_RXO);
+	iow32(dev, IMS, IMS_RXO | IMS_RXT0);
 
 	ral = ior32(dev, RAL);
 	rah = ior32(dev, RAH);
