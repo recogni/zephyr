@@ -171,7 +171,6 @@ static struct net_pkt* e1000_rx(struct e1000_dev *dev) {
 }
 
 void e1000_isr(struct e1000_dev *dev) {
-//	struct e1000_dev *dev = ddev->data;
 	uint32_t icr = ior32(dev, ICR); /* Cleared upon read */
 	uint16_t vlan_tag = NET_VLAN_TAG_UNSPEC;
 
@@ -206,24 +205,12 @@ void e1000_isr(struct e1000_dev *dev) {
 #endif /* CONFIG_NET_VLAN */
 
 			net_recv_data(get_iface(dev, vlan_tag), pkt);
-#if 0
-			iow32(dev, RCTL, 0);
-			iow32(dev, RDH, 0);
-			iow32(dev, RDT, 0);
-			//iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
-            dev->prx[dev->rdh].sta = 0;
-            dev->prx[dev->rdh].len = 2048;
-            iow32(dev, IMS, IMS_RXO | IMS_RXT0);
-			iow32(dev, RCTL, RCTL_EN );
-			iow32(dev, RDT, 1);
-#else
 			dev->rdh = (dev->rdh + 1) % dev->rdlen;
 			dev->prx[dev->rdt].addr = POINTER_TO_INT(dev->rxb) & 0xFFFFFFFFFF;
 			dev->prx[dev->rdt].sta = 0;
 			dev->prx[dev->rdt].len = 2048;
 			dev->rdt = (dev->rdt + 1) % dev->rdlen;
 			iow32(dev, RDT, dev->rdt);
-#endif
 		} else {
 			eth_stats_update_errors_rx(get_iface(dev, vlan_tag));
 		}
@@ -244,10 +231,6 @@ int e1000_probe(const struct device *ddev) {
 	uint32_t ral, rah;
 	struct pcie_mbar mbar;
 
-//	if (!pcie_probe(bdf, PCIE_ID(PCI_VENDOR_ID_INTEL,
-//				     PCI_DEVICE_ID_I82540EM))) {
-//		return -ENODEV;
-//	}
 	pcie_probe(0x100, PCIE_ID(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_I82540EM));
 
 	pcie_get_mbar(bdf, 0, &mbar);
@@ -288,7 +271,7 @@ int e1000_probe(const struct device *ddev) {
 
 	for (int i = 0; i < dev->tdlen; i++) {
 		dev->ptx[i].addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
-		dev->ptx[i].len = 0x2a;
+		dev->ptx[i].len = 2048;
 		dev->ptx[i].sta = 0;
 		dev->ptx[i].cmd = TDESC_EOP | TDESC_RS | TDESC_IFCS;
 
@@ -311,8 +294,6 @@ int e1000_probe(const struct device *ddev) {
 	ral = ior32(dev, TXDCTL);
 	iow32(dev, TXDCTL, ral);
 
-//	iow32(dev, RDBAL, (intptr_t) &dev->rx);
-//	iow32(dev, RDBAH, 0);
 	iow32(dev, RDBAL, 0xFFFFFFFF & ((uint64_t )dev->prx));
 	iow32(dev, RDBAH, (0xFF & ((uint64_t )(dev->prx) >> 32)));
 	iow32(dev, RDLEN, (dev->rdlen * 16));
@@ -350,7 +331,6 @@ static void e1000_iface_init(struct net_if *iface) {
 //
 //		irq_enable(DT_INST_IRQN(0));
 		iow32(dev, CTRL, CTRL_SLU); /* Set link up */
-//		iow32(dev, RCTL, RCTL_EN | RCTL_MPE | RCTL_SBP);
 		iow32(dev, RCTL, RCTL_EN | RCTL_MPE);
 
 	}
