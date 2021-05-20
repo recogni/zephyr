@@ -46,6 +46,7 @@ static const char* e1000_reg_to_string(enum e1000_reg_t r) {
 	_(CTRL)
 ;		_(ICR);
 		_(ICS);
+		_(ITR);
 		_(IMS);
 		_(RCTL);
 		_(TCTL);
@@ -54,6 +55,7 @@ static const char* e1000_reg_to_string(enum e1000_reg_t r) {
 		_(RDLEN);
 		_(RDH);
 		_(RDT);
+		_(RADV);
 		_(TDBAL);
 		_(TDBAH);
 		_(TDLEN);
@@ -285,10 +287,8 @@ int e1000_probe(const struct device *ddev) {
 	iow32(dev, TDH, dev->tdh);
 	iow32(dev, TDT, dev->tdt);
 
-	// debug
-	iow32(dev, 0xC4, 0x1); // minimum value
-	// RADV
-	iow32(dev, 0x0282C, 0x1); // minimum value
+	iow32(dev, ITR, 0x1); // ITR minimum value
+	iow32(dev, RADV, 0x1); // RADV minimum value
 
 	iow32(dev, TCTL, TCTL_EN | 0x8); // PSP field for padding
 	ral = ior32(dev, TXDCTL);

@@ -38,6 +38,7 @@ extern "C" {
 enum e1000_reg_t {
 	CTRL = 0x0000, /* Device Control */
 	ICR = 0x00C0, /* Interrupt Cause Read */
+	ITR = 0x00C4, /* Int Throttle Rate */
 	ICS = 0x00C8, /* Interrupt Cause Set */
 	IMS = 0x00D0, /* Interrupt Mask Set */
 	RCTL = 0x0100, /* Receive Control */
@@ -47,6 +48,7 @@ enum e1000_reg_t {
 	RDLEN = 0x2808, /* Rx Descriptor Length */
 	RDH = 0x2810, /* Rx Descriptor Head */
 	RDT = 0x2818, /* Rx Descriptor Tail */
+	RADV = 0x282C, /* Rx Int Delay Timer  */
 	TDBAL = 0x3800, /* Tx Descriptor Base Address Low */
 	TDBAH = 0x3804, /* Tx Descriptor Base Address High */
 	TDLEN = 0x3808, /* Tx Descriptor Length */
@@ -79,8 +81,6 @@ struct e1000_rx {
 };
 
 struct e1000_dev {
-//	volatile struct e1000_tx tx __aligned(16);
-//	volatile struct e1000_rx rx __aligned(16);
 	struct e1000_tx *ptx;
 	struct e1000_rx *prx;
 
