@@ -19,7 +19,7 @@ extern "C" {
 #define ICR_TXDW	     (1) /* Transmit Descriptor Written Back */
 #define ICR_TXQE	(1 << 1) /* Transmit Queue Empty */
 #define ICR_RXO		(1 << 6) /* Receiver Overrun */
-#define ICR_RXT0		(1 << 7) /*  */
+#define ICR_RXT0		(1 << 7) /* Rx Timer */
 
 #define IMS_RXO		(1 << 6) /* Receiver FIFO Overrun */
 #define IMS_RXT0	(1 << 7) /*  */

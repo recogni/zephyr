@@ -103,7 +103,9 @@ static int e1000_tx(struct e1000_dev *dev, void *buf, size_t len) {
 	uint8_t tdt = dev->tdt;
 
 	dev->ptx[tdt].addr = POINTER_TO_INT(dev->txb) & 0xFFFFFFFFFF;
+
 	dev->ptx[tdt].len = len;
+
 	dev->ptx[tdt].cmd = TDESC_EOP | TDESC_RS | TDESC_IFCS;
 	dev->ptx[tdt].sta = 0;
 	dev->tdt = (dev->tdt + 1) % dev->tdlen;
@@ -254,12 +256,13 @@ int e1000_probe(const struct device *ddev) {
 
 	k_heap_init(&h, pAmem, 65536);
 	dev->txb = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
+
 	dev->rxb = k_heap_aligned_alloc(&h, 512, 2048, K_NO_WAIT);
 
-	/*	dev->rxb = 0x8D0010C00; if multi translation tables used */
 	dev->ptx = (struct e1000_tx*) k_heap_aligned_alloc(&h, 128,
 			(dev->tdlen * 16),
 			K_NO_WAIT);
+
 	dev->prx = (struct e1000_rx*) k_heap_aligned_alloc(&h, 128,
 			(dev->rdlen * 16),
 			K_NO_WAIT);
