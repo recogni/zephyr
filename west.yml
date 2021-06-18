@@ -30,6 +30,7 @@ manifest:
     - name: fatfs
       path: modules/fs/fatfs
     - name: littlefs
+      revision: 6372f515fe59616bd7e00ca7bcce762c05ab029b
       path: modules/fs/littlefs
     - name: mbedtls
       revision: 53044168b43f06ec5654b906a2cdd260bf477edd
@@ -38,3 +39,4 @@ manifest:
   self:
     path: zephyr
     west-commands: scripts/west-commands.yml
+
