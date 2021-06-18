@@ -13,7 +13,10 @@
 #include <fs/fs.h>
 #include <fs/fs_sys.h>
 
-#define LFS_LOG_REGISTER
+#include <logging/log.h>
+
+LOG_MODULE_REGISTER(lfs, 3);
+//#define LFS_LOG_REGISTER
 #include <lfs_util.h>
 
 #include <lfs.h>

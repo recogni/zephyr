@@ -13,3 +13,4 @@ target_compile_definitions(app PRIVATE
 		BYPASS_FS_OPEN_FLAGS_LFS_RW_IS_DEFAULT
 )
 target_sources(app PRIVATE ${app_sources} ../common/test_fs_open_flags.c)
+zephyr_include_directories($ENV{ZEPHYR_BASE}/../modules/fs/littlefs)
