@@ -14,7 +14,7 @@ if(CONFIG_FILE_SYSTEM)
 
   target_link_libraries_ifdef(CONFIG_FAT_FILESYSTEM_ELM   FS INTERFACE ELMFAT)
   #target_link_libraries_ifdef(CONFIG_FILE_SYSTEM_LITTLEFS FS INTERFACE LITTLEFS)
-  target_link_libraries_ifdef(CONFIG_FILE_SYSTEM_LITTLEFS FS INTERFACE /home/brett/scorp_6_16/scorpio-fw/build/zephyr/subsys/fs/libsubsys__fs.a)
+  #target_link_libraries_ifdef(CONFIG_FILE_SYSTEM_LITTLEFS FS INTERFACE /home/brett/scorp_6_18/scorpio-fw/build/zephyr/subsys/fs/libsubsys__fs.a)
 endif()
 
 add_subdirectory_ifdef(CONFIG_FCB  ./fcb)
