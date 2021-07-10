@@ -100,7 +100,12 @@ static void schedule_next_timeout(uint32_t current_ticks)
  */
 static void task_wdt_trigger(struct k_timer *timer_id)
 {
+#ifdef CONFIG_64BIT
+	int channel_id = (long long)k_timer_user_data_get(timer_id);
+#else 
 	int channel_id = (int)k_timer_user_data_get(timer_id);
+#endif
+
 	bool bg_channel = IS_ENABLED(CONFIG_TASK_WDT_HW_FALLBACK) &&
 			  (channel_id == TASK_WDT_BACKGROUND_CHANNEL);
 
