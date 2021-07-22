@@ -9,6 +9,8 @@ LOG_MODULE_REGISTER(tftp_client, CONFIG_TFTP_LOG_LEVEL);
 
 #include <stddef.h>
 #include <net/tftp.h>
+#include <stdio.h>
+
 #include "tftp_client.h"
 
 #define ADDRLEN(sock) \
@@ -20,6 +22,29 @@ static uint8_t   tftpc_buffer[TFTPC_MAX_BUF_SIZE];
 
 /* Global mutex to protect critical resources. */
 K_MUTEX_DEFINE(tftpc_lock);
+
+
+// /*
+//  * Converts block number to length-2 string.
+//  */
+// void s_to_i(char *f, int n)
+// {
+// 	if (n == 0) 
+// 	{
+// 		f[0] = '0', f[1] = '0', f[2] = '\0';
+// 	} 
+// 	else if (n % 10 > 0 && n / 10 == 0)
+// 	{
+// 		char c = n + '0';
+// 		f[0] = '0', f[1] = c, f[2] = '\0';
+// 	} else if(n % 100 > 0 && n / 100 == 0){
+// 		char c2 = (n % 10) + '0';
+// 		char c1 = (n / 10) + '0';
+// 		f[0] = c1, f[1] = c2, f[2] = '\0';
+// 	} else {
+// 		f[0] = '9', f[1] = '9', f[2] = '\0';
+// 	}
+// }
 
 /*
  * Prepare the read request as required by RFC1350. This packet can be sent
@@ -88,6 +113,24 @@ static inline int send_ack(int sock, struct tftphdr_ack *ackhdr)
 
 	return 0;
 }
+
+/*
+ * Send a data message to the TFTP Server.
+ */
+static inline int send_data(int sock, int block, char *msg, int msg_size)
+{
+	uint32_t req_size = 0;
+
+	sys_put_be16(DATA_OPCODE, tftpc_buffer);
+	sys_put_be16(block, tftpc_buffer + 2);
+	req_size = TFTP_HEADER_SIZE;
+
+	strncpy(tftpc_buffer + req_size, msg, msg_size);
+	req_size += msg_size;
+
+	return send(sock, tftpc_buffer, req_size, 0);
+}
+
 
 static int tftp_send_request(int sock, struct sockaddr *server_addr,
 		int request, const char *remote_file, const char *mode)
@@ -163,7 +206,7 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 
 	sock = socket(server_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0) {
-		LOG_ERR("Failed to create UDP socket (IPv4): %d", errno);
+		printf("Failed to create UDP socket (IPv4): %d\n", errno);
 		return -errno;
 	}
 
@@ -184,7 +227,7 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 			opcode, block_no, rcv_size);
 
 		if (opcode != DATA_OPCODE) {
-			LOG_ERR("Server responded with invalid opcode.");
+			printf("Server responded with invalid opcode.\n");
 			ret = TFTPC_REMOTE_ERROR;
 			break;
 		}
@@ -196,9 +239,10 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 			ackhdr.block = htons(block_no);
 			tx_count = 0;
 
+			// printf("data_sz=%d user_buf=%d index=%d\n", data_size, client->user_buf_size, tftpc_index);
 			/* Only copy block if user buffer has enough space */
 			if (data_size > (client->user_buf_size - tftpc_index)) {
-				LOG_ERR("User buffer is full.");
+				printf("User buffer is full.\n");
 				send_err(sock, TFTP_ERROR_DISK_FULL, NULL);
 				ret = TFTPC_BUFFER_OVERFLOW;
 				break;
@@ -227,7 +271,7 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 
 		do {
 			if (tx_count > TFTP_REQ_RETX) {
-				LOG_ERR("No more retransmits. Exiting");
+				printf("No more retransmits. Exiting\n");
 				ret = TFTPC_RETRIES_EXHAUSTED;
 				goto req_abort;
 			}
@@ -250,5 +294,96 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 req_abort:
 	k_mutex_unlock(&tftpc_lock);
 	close(sock);
+	return ret;
+}
+
+int tftp_put(struct sockaddr *server_addr, struct tftpc *client,
+	     const char *remote_file, const char *mode)
+{
+	int sock;
+	int send_size = client->user_buf_size;
+	int ret;
+
+	sock = socket(server_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0) {
+		printf("Failed to create UDP socket (IPv4): %d\n", errno);
+		return -errno;
+	}
+
+	/* Obtain Global Lock before accessing critical resources. */
+	k_mutex_lock(&tftpc_lock, K_FOREVER);
+
+	/* Send out the request to the TFTP Server. */
+	ret = tftp_send_request(sock, server_addr, WRITE_REQUEST, remote_file, mode);
+	
+	/* Wait for an ACK from the server. */
+	struct pollfd fds = {
+		.fd     = sock,
+		.events = ZSOCK_POLLIN,
+	};
+
+	if (poll(&fds, 1, CONFIG_TFTPC_REQUEST_TIMEOUT) <= 0)
+	{
+		printf("Poll error waiting for WRITE ACK\n");
+		return -1; // TODO
+	}
+
+	/* Receive an ACK from the TFTP Server. */
+	ret = recv(sock, tftpc_buffer, TFTPC_MAX_BUF_SIZE, 0);
+	if (tftpc_buffer[0] != '0' && tftpc_buffer[1] != '4')
+	{
+		printf("Invalid ACK for WRITE request\n");
+		return -1; // TODO
+	}
+
+	int remaining = send_size;
+	int block = 1;
+	int max_packet_sz = TFTPC_MAX_BUF_SIZE - TFTP_HEADER_SIZE;
+	uint8_t *p_data = tftpc_buffer;
+
+	while (remaining > 0)
+	{
+		// Next packet size.
+		int next_block_sz = (remaining < max_packet_sz) ? remaining : max_packet_sz;
+
+		// Send the current block.
+		printf("Sending block %d\n", block);
+		if (send_data(sock, block, p_data, next_block_sz) < 0)
+		{
+			printf("failed to send block %d\n", block);
+			return -1; // TODO
+		}
+
+		/* Wait for an ACK from the server. */
+		struct pollfd fds = {
+			.fd     = sock,
+			.events = ZSOCK_POLLIN,
+		};
+
+		if (poll(&fds, 1, CONFIG_TFTPC_REQUEST_TIMEOUT) <= 0)
+		{
+			printf("Poll error waiting for WRITE ACK\n");
+			return -1; // TODO
+		}
+
+		/* Receive an ACK from the TFTP Server. */
+		ret = recv(sock, tftpc_buffer, TFTPC_MAX_BUF_SIZE, 0);
+		if (tftpc_buffer[0] != '0' && tftpc_buffer[1] != '4')
+		{
+			printf("Invalid ACK for WRITE request\n");
+			return -1; // TODO
+		}
+
+		/* Update the data pointer to the next block */
+		p_data += next_block_sz;
+
+		remaining -= next_block_sz;
+		if (remaining == 0 && next_block_sz == max_packet_sz)
+		{
+			printf("TODO: Send dummy here to signal end of file.\n");
+			return -1; // TODO
+		}
+	}
+
 	return ret;
 }

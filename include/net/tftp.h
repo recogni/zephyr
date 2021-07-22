@@ -50,4 +50,21 @@ struct tftpc {
 int tftp_get(struct sockaddr *server, struct tftpc *client,
 	     const char *remote_file, const char *mode);
 
+/* @brief This function puts a "file" to the remote server.
+ *
+ *  If the file is successfully sent its size will be returned in
+ * `client->user_buf_size` parameter.
+ *
+ * @param server      Control Block that represents the remote server.
+ * @param client      Client Buffer Information.
+ * @param remote_file Name of the remote file to put.
+ * @param mode        TFTP Client "mode" setting
+ *
+ * @return TFTPC_SUCCESS if the operation completed successfully.
+ *         TFTPC_REMOTE_ERROR if the server failed to process our request.
+ *         TFTPC_RETRIES_EXHAUSTED if the client timed out waiting for server.
+ */
+int tftp_put(struct sockaddr *server, struct tftpc *client,
+	     const char *remote_file, const char *mode);
+
 #endif /* ZEPHYR_INCLUDE_NET_TFTP_H_ */
