@@ -35,8 +35,6 @@ manifest:
     - name: mbedtls
       revision: 53044168b43f06ec5654b906a2cdd260bf477edd
       path: modules/crypto/mbedtls
-    - name: mcuboot
-      path: modules/mcuboot
 
   self:
     path: zephyr
