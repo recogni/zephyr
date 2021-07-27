@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: recogni
       url-base: git@github.com:recogni
+    - name: recogni-http
+      url-base: https://github.com/recogni
 
   #
   # Please add items below based on alphabetical order
@@ -95,7 +97,7 @@ manifest:
     - name: mcuboot
       revision: 65e999a4c427dc2a5a9bf1e83c2122891d5da8ad
       path: modules/mcuboot
-      remote: recogni
+      remote: recogni-http
     - name: mcumgr
       revision: 5c5055f5a7565f8152d75fcecf07262928b4d56e
       path: modules/lib/mcumgr
