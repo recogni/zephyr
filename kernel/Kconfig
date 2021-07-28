@@ -865,5 +865,5 @@ config THREAD_LOCAL_STORAGE
 endmenu
 
 config RISCV_NO_KERNEL
-	bool "Jump straight to `main()`, bypass `z_cstart()`.
+	bool "Jump straight to `main()`, bypass `z_cstart()`."
 	default n
