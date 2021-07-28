@@ -35,10 +35,15 @@ static void event_handler(struct net_mgmt_event_callback *cb,
 	}
 
 	if (mgmt_event == NET_EVENT_L4_DISCONNECTED) {
+#ifdef FOO
 		LOG_INF("Network disconnected");
 		smp_udp_close();
 		return;
-	}
+#else
+		LOG_ERR("Skipping udp_close");
+#endif
+
+    }
 }
 
 void start_smp_udp(void)

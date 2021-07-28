@@ -9,7 +9,7 @@
  */
 
 #include <logging/log.h>
-LOG_MODULE_REGISTER(net_conn, CONFIG_NET_CONN_LOG_LEVEL);
+LOG_MODULE_REGISTER(net_conn, 3);
 
 #include <errno.h>
 #include <sys/util.h>
