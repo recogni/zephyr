@@ -22,7 +22,7 @@
 #include <core_pmp.h>
 
 #if defined(CONFIG_RISCV_NO_KERNEL)
-  extern int main(void) 
+extern int main(void);
 #endif // defined(CONFIG_RISCV_NO_KERNEL)
 
 /**
