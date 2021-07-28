@@ -158,8 +158,11 @@ extern int arch_swap(unsigned int key);
 static inline int z_swap_irqlock(unsigned int key)
 {
 	int ret;
+	*((volatile uint32_t *)0x81470000) = 0xa0;
 	z_check_stack_sentinel();
+	*((volatile uint32_t *)0x81470000) = 0xa1;
 	ret = arch_swap(key);
+	*((volatile uint32_t *)0x81470000) = 0xa2;
 	return ret;
 }
 

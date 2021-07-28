@@ -28,33 +28,26 @@
 
 #define VECTOR_SIZE 0x100
 
-#ifdef CONFIG_USE_DT_CODE_PARTITION
-
-#ifdef CONFIG_BOOTLOADER_MCUBOOT
-
-
-#define ROM_BASE (DT_REG_ADDR(DT_CHOSEN(zephyr_code_partition)))
-#define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_code_partition)))
-
-#define VECTOR_BASE (ROM_BASE + CONFIG_ROM_START_OFFSET)
-
-#else
-
-#define ROM_BASE (DT_REG_ADDR(DT_CHOSEN(zephyr_code_partition)))
-#define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_code_partition)) - VECTOR_BASE)
-
-#define VECTOR_BASE (ROM_BASE + ROM_SIZE)
-
-#endif
-
-#else
-
-#define ROM_BASE DT_REG_ADDR(DT_CHOSEN(zephyr_flash))
-#define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_flash)) - VECTOR_SIZE)
-
-#define VECTOR_BASE (ROM_BASE + ROM_SIZE)
-
-#endif
+#ifdef CONFIG_ROM_BASE
+  #define ROM_BASE CONFIG_ROM_BASE
+  #define ROM_SIZE (CONFIG_ROM_SIZE)
+#else /* !CONFIG_ROM_BASE */
+  #ifdef CONFIG_USE_DT_CODE_PARTITION
+    #ifdef CONFIG_BOOTLOADER_MCUBOOT
+      #define ROM_BASE (DT_REG_ADDR(DT_CHOSEN(zephyr_code_partition)))
+      #define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_code_partition)))
+      #define VECTOR_BASE (ROM_BASE + CONFIG_ROM_START_OFFSET)
+    #else /* !CONFIG_BOOTLOADER_MCUBOOT */
+      #define ROM_BASE (DT_REG_ADDR(DT_CHOSEN(zephyr_code_partition)))
+      #define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_code_partition)) - VECTOR_BASE)
+      #define VECTOR_BASE (ROM_BASE + ROM_SIZE)
+    #endif /* CONFIG_BOOTLOADER_MCUBOOT */
+  #else /* !CONFIG_USE_DT_CODE_PARTITION */
+    #define ROM_BASE DT_REG_ADDR(DT_CHOSEN(zephyr_flash))
+    #define ROM_SIZE (DT_REG_SIZE(DT_CHOSEN(zephyr_flash)) - VECTOR_SIZE)
+    #define VECTOR_BASE (ROM_BASE + ROM_SIZE)
+  #endif
+#endif /* CONFIG_ROM_BASE */
 
 #define RAM_BASE CONFIG_SRAM_BASE_ADDRESS
 #define RAM_SIZE KB(CONFIG_SRAM_SIZE)
@@ -70,9 +63,6 @@ MEMORY
      * (The Arm core vector tables are at the beginning of each
      * flash bank.)
      */
-#ifndef CONFIG_BOOTLOADER_MCUBOOT
-    VECTORS (rx)  : ORIGIN = VECTOR_BASE, LENGTH = VECTOR_SIZE
-#endif
     RAM (rwx)     : ORIGIN = RAM_BASE,    LENGTH = RAM_SIZE
     /*
      * Special section, not included in the final binary, used
@@ -100,6 +90,14 @@ SECTIONS
 
     GROUP_START(ROM)
     _image_rom_start = ROM_BASE;
+
+    /* The vector table goes into core-dependent flash locations. */
+    SECTION_PROLOGUE(vectors,,)
+	{
+	_vector_start = .;
+	KEEP(*(.vectors.*))
+	} GROUP_LINK_IN(ROM)
+    _vector_end = .;
 
     SECTION_PROLOGUE(_TEXT_SECTION_NAME,,)
 	{
@@ -144,16 +142,6 @@ SECTIONS
 
     _image_rodata_end = .;
     _image_rom_end = .;
-
-#ifndef CONFIG_BOOTLOADER_MCUBOOT
-    /* The vector table goes into core-dependent flash locations. */
-    SECTION_PROLOGUE(vectors,,)
-	{
-	_vector_start = .;
-	KEEP(*(.vectors.*))
-	} GROUP_LINK_IN(VECTORS)
-    _vector_end = .;
-#endif
 
     GROUP_END(ROM)
 

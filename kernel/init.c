@@ -242,8 +242,10 @@ static char *prepare_multithreading(void)
 {
 	char *stack_ptr;
 
+	*((volatile uint32_t *)0x81470000) = 0x60;
 	/* _kernel.ready_q is all zeroes */
 	z_sched_init();
+	*((volatile uint32_t *)0x81470000) = 0x61;
 
 #ifndef CONFIG_SMP
 	/*
@@ -274,7 +276,9 @@ static char *prepare_multithreading(void)
 			 K_KERNEL_STACK_SIZEOF(z_interrupt_stacks[i]));
 	}
 
+	*((volatile uint32_t *)0x81470000) = 0x62;
 	initialize_timeouts();
+	*((volatile uint32_t *)0x81470000) = 0x63;
 
 	return stack_ptr;
 }
@@ -290,6 +294,7 @@ static FUNC_NORETURN void switch_to_main_thread(char *stack_ptr)
 	 * current fake thread is not on a wait queue or ready queue, so it
 	 * will never be rescheduled in.
 	 */
+	*((volatile uint32_t *)0x81470000) = 0x64;
 	z_swap_unlocked();
 #endif
 	CODE_UNREACHABLE; /* LCOV_EXCL_LINE */
@@ -372,8 +377,10 @@ FUNC_NORETURN void z_cstart(void)
 
 	LOG_CORE_INIT();
 
+	*((volatile uint32_t *)0x81470000) = 0x51;
 	/* perform any architecture-specific initialization */
 	arch_kernel_init();
+	*((volatile uint32_t *)0x81470000) = 0x52;
 
 #if defined(CONFIG_MULTITHREADING)
 	/* Note: The z_ready_thread() call in prepare_multithreading() requires
@@ -386,12 +393,15 @@ FUNC_NORETURN void z_cstart(void)
 #if defined(CONFIG_MMU) && defined(CONFIG_USERSPACE)
 	z_kernel_map_fixup();
 #endif
+	*((volatile uint32_t *)0x81470000) = 0x53;
 	/* do any necessary initialization of static devices */
 	z_device_state_init();
+	*((volatile uint32_t *)0x81470000) = 0x54;
 
 	/* perform basic hardware initialization */
 	z_sys_init_run_level(_SYS_INIT_LEVEL_PRE_KERNEL_1);
 	z_sys_init_run_level(_SYS_INIT_LEVEL_PRE_KERNEL_2);
+	*((volatile uint32_t *)0x81470000) = 0x55;
 
 #ifdef CONFIG_STACK_CANARIES
 	uintptr_t stack_guard;
@@ -406,6 +416,8 @@ FUNC_NORETURN void z_cstart(void)
 	timing_start();
 #endif
 
+	*((volatile uint32_t *)0x81470000) = 0x56;
+
 #ifdef CONFIG_MULTITHREADING
 	switch_to_main_thread(prepare_multithreading());
 #else
@@ -416,6 +428,8 @@ FUNC_NORETURN void z_cstart(void)
 	ARCH_SWITCH_TO_MAIN_NO_MULTITHREADING(bg_thread_main,
 		NULL, NULL, NULL);
 #else
+
+*((volatile uint32_t *)0x81470000) = 0x57;
 	bg_thread_main(NULL, NULL, NULL);
 
 	/* LCOV_EXCL_START

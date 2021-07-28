@@ -220,26 +220,26 @@ static void rv32m1_setup_peripheral_clocks(void)
  */
 static int soc_rv32m1_init(const struct device *arg)
 {
-	unsigned int key;
+	// unsigned int key;
 
 	ARG_UNUSED(arg);
 
-	key = irq_lock();
+	// key = irq_lock();
 
-	/* Switch to SIRC so we can initialize the FIRC. */
-	rv32m1_switch_to_sirc();
+	// /* Switch to SIRC so we can initialize the FIRC. */
+	// rv32m1_switch_to_sirc();
 
-	/* Now that we're running off of SIRC, set up and switch to FIRC. */
-	CLOCK_InitFirc(&rv32m1_firc_config);
-	rv32m1_switch_sys_clk(&rv32m1_sys_clk_config_firc);
+	// /* Now that we're running off of SIRC, set up and switch to FIRC. */
+	// CLOCK_InitFirc(&rv32m1_firc_config);
+	// rv32m1_switch_sys_clk(&rv32m1_sys_clk_config_firc);
 
-	/* Initialize LPFLL */
-	CLOCK_InitLpFll(&rv32m1_lpfll_cfg);
+	// /* Initialize LPFLL */
+	// CLOCK_InitLpFll(&rv32m1_lpfll_cfg);
 
-	/* Initialize peripheral clocks */
-	rv32m1_setup_peripheral_clocks();
+	// /* Initialize peripheral clocks */
+	// rv32m1_setup_peripheral_clocks();
 
-	irq_unlock(key);
+	// irq_unlock(key);
 
 	return 0;
 }
