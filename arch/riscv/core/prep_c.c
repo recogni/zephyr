@@ -21,6 +21,10 @@
 #include <kernel_internal.h>
 #include <core_pmp.h>
 
+#if defined(CONFIG_RISCV_NO_KERNEL)
+  extern int main(void) 
+#endif // defined(CONFIG_RISCV_NO_KERNEL)
+
 /**
  *
  * @brief Prepare to and run C code
@@ -42,6 +46,11 @@ void _PrepC(void)
 #ifdef CONFIG_PMP_STACK_GUARD
 	z_riscv_configure_interrupt_stack_guard();
 #endif
+
+#if defined(CONFIG_RISCV_NO_KERNEL)
+	main();
+#else
 	z_cstart();
+#endif 
 	CODE_UNREACHABLE;
 }
