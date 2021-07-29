@@ -104,31 +104,32 @@ void arch_irq_disable(unsigned int irq)
 
 int arch_irq_is_enabled(unsigned int irq)
 {
-	if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
-		unsigned int level = rv32m1_irq_level(irq);
+	// RECOGNI-VCPU-PULP-BRINGUP TODO
+	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
+	// 	unsigned int level = rv32m1_irq_level(irq);
 
-		if (level == 1U) {
-			return (EVENT_UNIT->INTPTEN &
-				BIT(rv32m1_level1_irq(irq))) != 0;
-		} else {
-			uint32_t channel, line, ier;
+	// 	if (level == 1U) {
+	// 		return (EVENT_UNIT->INTPTEN &
+	// 			BIT(rv32m1_level1_irq(irq))) != 0;
+	// 	} else {
+	// 		uint32_t channel, line, ier;
 
-			/*
-			 * Here we break the abstraction and look
-			 * directly at the INTMUX registers. We can't
-			 * use the irq_nextlevel.h API, as that only
-			 * tells us whether some IRQ at the next level
-			 * is enabled or not.
-			 */
-			channel = rv32m1_intmux_channel(irq);
-			line = rv32m1_intmux_line(irq);
-			ier = INTMUX->CHANNEL[channel].CHn_IER_31_0 & BIT(line);
+	// 		/*
+	// 		 * Here we break the abstraction and look
+	// 		 * directly at the INTMUX registers. We can't
+	// 		 * use the irq_nextlevel.h API, as that only
+	// 		 * tells us whether some IRQ at the next level
+	// 		 * is enabled or not.
+	// 		 */
+	// 		channel = rv32m1_intmux_channel(irq);
+	// 		line = rv32m1_intmux_line(irq);
+	// 		ier = INTMUX->CHANNEL[channel].CHn_IER_31_0 & BIT(line);
 
-			return ier != 0U;
-		}
-	} else {
+	// 		return ier != 0U;
+	// 	}
+	// } else {
 		return (EVENT_UNIT->INTPTEN & BIT(rv32m1_level1_irq(irq))) != 0;
-	}
+	// }
 }
 
 /*
@@ -145,11 +146,12 @@ void soc_interrupt_init(void)
 	EVENT_UNIT->EVTPENDCLEAR   = 0xFFFFFFFF;
 	(void)(EVENT_UNIT->EVTPENDCLEAR); /* Ensures write has finished. */
 
-	if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
-		dev_intmux = device_get_binding(
-				DT_LABEL(DT_INST(0, openisa_rv32m1_intmux)));
-		__ASSERT(dev_intmux, "no INTMUX device found");
-	}
+	// RECOGNI-VCPU-PULP-BRINGUP TODO
+	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
+	// 	dev_intmux = device_get_binding(
+	// 			DT_LABEL(DT_INST(0, openisa_rv32m1_intmux)));
+	// 	__ASSERT(dev_intmux, "no INTMUX device found");
+	// }
 }
 
 /**

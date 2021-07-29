@@ -39,11 +39,12 @@ SECTION_FUNC(exception.other, __soc_is_irq)
  * soc_context.h so that offsets.h contains a pointer to
  * INTPTPENDCLEAR.
  */
+ // TODO: RECOGNI 
 SECTION_FUNC(exception.other, __soc_handle_irq)
-	la t0, __EVENT_INTPTPENDCLEAR
-	li t1, 1
-	sll t1, t1, a0
-	sw t1, 0x00(t0)
+	# la t0, __EVENT_INTPTPENDCLEAR
+	# li t1, 1
+	# sll t1, t1, a0
+	# sw t1, 0x00(t0)
 	ret
 
 #ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE

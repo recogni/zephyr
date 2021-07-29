@@ -85,7 +85,7 @@ aa_loop:
 	csrw mscratch, sp
 
 #ifdef CONFIG_WDOG_INIT
-	call _WdogInit
+	# call _WdogInit
 #endif
 
 	/*
