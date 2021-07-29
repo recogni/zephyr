@@ -41,7 +41,11 @@ manifest:
       path: modules/mcuboot
       revision: cafc5ce0c1c75484dca915fdd5e493961bac38d0
       remote: recogni-http
-    
+    - name: hal_openisa
+      revision: 40d049f69c50b58ea20473bee14cf93f518bf262
+      path: modules/hal/openisa
+      groups:
+        - hal 
 
   self:
     path: zephyr
