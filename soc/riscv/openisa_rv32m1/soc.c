@@ -68,42 +68,45 @@ void sys_arch_reboot(int type)
 
 void arch_irq_enable(unsigned int irq)
 {
-	if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
-		unsigned int level = rv32m1_irq_level(irq);
+	*(volatile uint32_t *)0x10200800 |= (1 << irq);
+	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
+	// 	unsigned int level = rv32m1_irq_level(irq);
 
-		if (level == 1U) {
-			EVENT_UNIT->INTPTEN |= BIT(rv32m1_level1_irq(irq));
-			/* Ensures write has finished: */
-			(void)(EVENT_UNIT->INTPTEN);
-		} else {
-			irq_enable_next_level(dev_intmux, irq);
-		}
-	} else {
-		EVENT_UNIT->INTPTEN |= BIT(rv32m1_level1_irq(irq));
-		(void)(EVENT_UNIT->INTPTEN);
-	}
+	// 	if (level == 1U) {
+	// 		EVENT_UNIT->INTPTEN |= BIT(rv32m1_level1_irq(irq));
+	// 		/* Ensures write has finished: */
+	// 		(void)(EVENT_UNIT->INTPTEN);
+	// 	} else {
+	// 		irq_enable_next_level(dev_intmux, irq);
+	// 	}
+	// } else {
+	// 	EVENT_UNIT->INTPTEN |= BIT(rv32m1_level1_irq(irq));
+	// 	(void)(EVENT_UNIT->INTPTEN);
+	// }
 }
 
 void arch_irq_disable(unsigned int irq)
 {
-	if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
-		unsigned int level = rv32m1_irq_level(irq);
+	*(volatile uint32_t *)0x10200800 &= ((~(1 << irq)) & 0x3fffffff);
+	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
+	// 	unsigned int level = rv32m1_irq_level(irq);
 
-		if (level == 1U) {
-			EVENT_UNIT->INTPTEN &= ~BIT(rv32m1_level1_irq(irq));
-			/* Ensures write has finished: */
-			(void)(EVENT_UNIT->INTPTEN);
-		} else {
-			irq_disable_next_level(dev_intmux, irq);
-		}
-	} else {
-		EVENT_UNIT->INTPTEN &= ~BIT(rv32m1_level1_irq(irq));
-		(void)(EVENT_UNIT->INTPTEN);
-	}
+	// 	if (level == 1U) {
+	// 		EVENT_UNIT->INTPTEN &= ~BIT(rv32m1_level1_irq(irq));
+	// 		/* Ensures write has finished: */
+	// 		(void)(EVENT_UNIT->INTPTEN);
+	// 	} else {
+	// 		irq_disable_next_level(dev_intmux, irq);
+	// 	}
+	// } else {
+	// 	EVENT_UNIT->INTPTEN &= ~BIT(rv32m1_level1_irq(irq));
+	// 	(void)(EVENT_UNIT->INTPTEN);
+	// }
 }
 
 int arch_irq_is_enabled(unsigned int irq)
 {
+	return ((*(volatile uint32_t *)0x10200800) & (1 << irq)) != 0 ? 1 : 0;
 	// RECOGNI-VCPU-PULP-BRINGUP TODO
 	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
 	// 	unsigned int level = rv32m1_irq_level(irq);
@@ -128,7 +131,7 @@ int arch_irq_is_enabled(unsigned int irq)
 	// 		return ier != 0U;
 	// 	}
 	// } else {
-		return (EVENT_UNIT->INTPTEN & BIT(rv32m1_level1_irq(irq))) != 0;
+		// return (EVENT_UNIT->INTPTEN & BIT(rv32m1_level1_irq(irq))) != 0;
 	// }
 }
 
@@ -141,10 +144,13 @@ int arch_irq_is_enabled(unsigned int irq)
  */
 void soc_interrupt_init(void)
 {
-	EVENT_UNIT->INTPTPENDCLEAR = 0xFFFFFFFF;
-	(void)(EVENT_UNIT->INTPTPENDCLEAR); /* Ensures write has finished. */
-	EVENT_UNIT->EVTPENDCLEAR   = 0xFFFFFFFF;
-	(void)(EVENT_UNIT->EVTPENDCLEAR); /* Ensures write has finished. */
+	// Setup all events for core0 to off.
+	// *(volatile uint32_t *)0x10200800 = 0;
+
+	// EVENT_UNIT->INTPTPENDCLEAR = 0xFFFFFFFF;
+	// (void)(EVENT_UNIT->INTPTPENDCLEAR); /* Ensures write has finished. */
+	// EVENT_UNIT->EVTPENDCLEAR   = 0xFFFFFFFF;
+	// (void)(EVENT_UNIT->EVTPENDCLEAR); /* Ensures write has finished. */
 
 	// RECOGNI-VCPU-PULP-BRINGUP TODO
 	// if (IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS)) {
@@ -228,6 +234,7 @@ static int soc_rv32m1_init(const struct device *arg)
 
 	key = irq_lock();
 
+*(volatile uint32_t *)0x10200800 = 0x3fffffff;
 	/* Switch to SIRC so we can initialize the FIRC. */
 	// rv32m1_switch_to_sirc();
 

@@ -31,12 +31,16 @@
 #define RI5CY_PCCR11    0x78B
 #define RI5CY_PCER      0x7A0
 #define RI5CY_PCMR      0x7A1
-#define RI5CY_LPSTART0  0x7B0
-#define RI5CY_LPEND0    0x7B1
-#define RI5CY_LPCOUNT0  0x7B2
-#define RI5CY_LPSTART1  0x7B4
-#define RI5CY_LPEND1    0x7B5
-#define RI5CY_LPCOUNT1  0x7B6
+
+// OLD CSR values. RECOGNI pulp for the VCPU and MIPIRX have these
+// remapped as CSRs at 0x7B0-0x7B3 are the debug CSRs.
+#define RI5CY_LPSTART0  0x7C0
+#define RI5CY_LPEND0    0x7C1
+#define RI5CY_LPCOUNT0  0x7C2
+#define RI5CY_LPSTART1  0x7C4
+#define RI5CY_LPEND1    0x7C5
+#define RI5CY_LPCOUNT1  0x7C6
+
 #define RI5CY_PRIVLV    0xC10
 #define RI5CY_MHARTID   0xF14
 
