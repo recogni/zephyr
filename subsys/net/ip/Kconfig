@@ -821,6 +821,13 @@ module-help = Enables promiscuous mode to output debug messages.
 source "subsys/net/Kconfig.template.log_config.net"
 endif # NET_PROMISCUOUS_MODE
 
+config NET_STEALTH_UNREACHABLE_DESTINATION
+	bool "Disable destination unreachable ICMP errors"
+	default n
+	help
+	  Suppress the generation of ICMP destination unreachable errors
+	  when ports that are not in a listening state receive packets.
+
 source "subsys/net/ip/Kconfig.stack"
 
 source "subsys/net/ip/Kconfig.mgmt"
