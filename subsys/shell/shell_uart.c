@@ -160,7 +160,7 @@ static void timer_handler(struct k_timer *timer)
 	while (uart_poll_in(sh_uart->ctrl_blk->dev, &c) == 0) {
 		if (ring_buf_put(sh_uart->rx_ringbuf, &c, 1) == 0U) {
 			/* ring buffer full. */
-			LOG_WRN("RX ring buffer full.");
+			//LOG_WRN("RX ring buffer full.");
 		}
 		sh_uart->ctrl_blk->handler(SHELL_TRANSPORT_EVT_RX_RDY,
 					   sh_uart->ctrl_blk->context);
@@ -179,6 +179,7 @@ static int init(const struct shell_transport *transport,
 	sh_uart->ctrl_blk->context = context;
 
 #ifdef CONFIG_MCUMGR_SMP_SHELL
+    XXXX
 	sh_uart->ctrl_blk->smp.buf_pool = &smp_shell_rx_pool;
 	k_fifo_init(&sh_uart->ctrl_blk->smp.buf_ready);
 #endif
@@ -217,6 +218,7 @@ static int enable(const struct shell_transport *transport, bool blocking_tx)
 
 	if (blocking_tx) {
 #ifdef CONFIG_SHELL_BACKEND_SERIAL_INTERRUPT_DRIVEN
+        XXX
 		uart_irq_tx_disable(sh_uart->ctrl_blk->dev);
 #endif
 	}
