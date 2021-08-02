@@ -56,6 +56,7 @@
 #define Z_FREE_VM_START	Z_KERNEL_VIRT_END
 #endif
 
+
 /*
  * Macros and data structures for physical page frame accounting,
  * APIs for use by eviction and backing store algorithms. This code
@@ -114,7 +115,11 @@ struct z_page_frame {
 	 * flags bits which shouldn't clobber each other. At all costs
 	 * the total size of struct z_page_frame must be minimized.
 	 */
+#if !defined(__riscv)
 } __packed;
+#else
+};
+#endif
 
 static inline bool z_page_frame_is_pinned(struct z_page_frame *pf)
 {

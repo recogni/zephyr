@@ -624,7 +624,7 @@ if(CONFIG_TIMEOUT_64BIT)
   set(SYSCALL_SPLIT_TIMEOUT_ARG --split-type k_timeout_t)
 endif()
 
-if(CONFIG_BOARD_SCORPIO)
+if(CONFIG_BOARD_SCORPIO AND NOT CONFIG_RISCV_MMU)
 add_custom_command(OUTPUT include/generated/syscall_dispatch.c ${syscall_list_h}
   # Also, some files are written to include/generated/syscalls/
   COMMAND

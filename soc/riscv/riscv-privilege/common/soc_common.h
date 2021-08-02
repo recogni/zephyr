@@ -18,8 +18,9 @@
 #define RISCV_MACHINE_EXT_IRQ        11 /* Machine External Interrupt */
 
 /* ECALL Exception numbers */
-#define SOC_MCAUSE_ECALL_EXP         11 /* Machine ECALL instruction */
-#define SOC_MCAUSE_USER_ECALL_EXP    8  /* User ECALL instruction */
+#define SOC_MCAUSE_ECALL_EXP            11 /* Machine ECALL instruction */
+#define SOC_MCAUSE_SUPERVISOR_ECALL_EXP 9  /* Machine ECALL instruction */
+#define SOC_MCAUSE_USER_ECALL_EXP       8  /* User ECALL instruction */
 
 /* SOC-specific MCAUSE bitfields */
 #ifdef CONFIG_64BIT
@@ -35,7 +36,11 @@
 #endif
 
 /* SOC-Specific EXIT ISR command */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+#define SOC_ERET                     sret
+#else
 #define SOC_ERET                     mret
+#endif
 
 #ifndef _ASMLANGUAGE
 

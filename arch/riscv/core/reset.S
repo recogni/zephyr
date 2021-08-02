@@ -8,6 +8,7 @@
 #include <toolchain.h>
 #include <linker/sections.h>
 #include <arch/cpu.h>
+#include <sys/mem_manage.h>
 
 /* exports */
 GTEXT(__initialize)
@@ -83,9 +84,32 @@ aa_loop:
 	 */
 	la sp, z_interrupt_stacks
 	li t0, CONFIG_ISR_STACK_SIZE
+#ifndef CONFIG_RISCV_SUPERVISOR
+	add sp, sp, t0
+	csrw mscratch, sp
+#else
+	/*
+	 * Set the machine mode exception handler stack up within
+	 * the bottom 1/8th of z_interrupt_stacks as and use the
+	 * rest as the supervisor mode expection handler stack.
+	 */
+	srli t0, t0, 3
+	andi t0, t0, ~7
+	add sp, sp, t0
+	csrw mscratch, sp
+	sub sp, sp, t0
+	li t0, CONFIG_ISR_STACK_SIZE
 	add sp, sp, t0
 
-	csrw mscratch, sp
+	/*
+	 * Convert the stack pointer to a virtual address for
+	 * supervisor mode (has an effect only if the MMU is enabled
+	 * via CONFIG_MMU because otherwise Z_MEM_VM_OFFSET is zero).
+	 */
+	li t0, Z_MEM_VM_OFFSET
+	add t0, sp, t0
+	csrw sscratch, t0
+#endif
 
 #ifdef CONFIG_WDOG_INIT
 	call _WdogInit

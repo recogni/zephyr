@@ -145,8 +145,11 @@ struct _thread_arch {
 	ulong_t priv_stack_start;
 	ulong_t user_sp;
 	ulong_t unfinished_syscall;
+
+#ifdef CONFIG_RISCV_PMP
 	ulong_t u_pmpcfg[RISCV_PMP_CFG_NUM];
 	ulong_t u_pmpaddr[CONFIG_PMP_SLOT];
+#endif /* CONFIG_RISCV_PMP */
 #endif
 };
 

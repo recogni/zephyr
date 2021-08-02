@@ -202,6 +202,20 @@
 	DO_CALLER_SAVED(RV_OP_LOADREG)		;\
 	addi sp, sp, __z_arch_esf_t_SIZEOF	;
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+#define CSR_CAUSE	scause
+#define CSR_EPC		sepc
+#define CSR_SCRATCH	sscratch
+#define CSR_STATUS	sstatus
+#define STATUS_PP	SSTATUS_SPP
+#else
+#define CSR_CAUSE	mcause
+#define CSR_EPC		mepc
+#define CSR_SCRATCH	mscratch
+#define CSR_STATUS	mstatus
+#define STATUS_PP	MSTATUS_MPP
+#endif /* CONFIG_RISCV_SUPERVISOR */
+
 /*
  * @brief Check previous mode.
  *
@@ -212,7 +226,7 @@
  */
 #define WAS_NOT_USER(ret, temp) \
 	RV_OP_LOADREG ret, __z_arch_esf_t_mstatus_OFFSET(sp)	;\
-	li temp, MSTATUS_MPP					;\
+	li temp, STATUS_PP					;\
 	and ret, ret, temp					;
 
 
@@ -287,9 +301,9 @@ GTEXT(__irq_wrapper)
  */
 SECTION_FUNC(exception.entry, __irq_wrapper)
 
-#ifdef CONFIG_PMP_STACK_GUARD
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/* Jump at the beginning of IRQ stack to avoid stack overflow */
-	csrrw sp, mscratch, sp
+	csrrw sp, CSR_SCRATCH, sp
 #endif /* CONFIG_PMP_STACK_GUARD */
 
 	/*
@@ -314,11 +328,11 @@ skip_store_fp_caller_saved:
 #endif /* CONFIG_FPU && CONFIG_FPU_SHARING */
 
 	/* Save MEPC register */
-	csrr t0, mepc
+	csrr t0, CSR_EPC
 	RV_OP_STOREREG t0, __z_arch_esf_t_mepc_OFFSET(sp)
 
 	/* Save SOC-specific MSTATUS register */
-	csrr t0, mstatus
+	csrr t0, CSR_STATUS
 	RV_OP_STOREREG t0, __z_arch_esf_t_mstatus_OFFSET(sp)
 
 #ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE
@@ -336,8 +350,8 @@ skip_store_fp_caller_saved:
 	RV_OP_LOADREG t1, _kernel_offset_to_current(t0)
 
 	/* Save user stack pointer */
-#ifdef CONFIG_PMP_STACK_GUARD
-	csrr t2, mscratch
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
+	csrr t2, CSR_SCRATCH
 #else
 	mv t2, sp
 #endif /* CONFIG_PMP_STACK_GUARD */
@@ -392,10 +406,14 @@ is_priv_sp:
 	 * perform a context-switch or an IRQ offload. Otherwise call _Fault
 	 * to report the exception.
 	 */
-	csrr t0, mcause
+	csrr t0, CSR_CAUSE
 	li t2, SOC_MCAUSE_EXP_MASK
 	and t0, t0, t2
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	li t1, SOC_MCAUSE_SUPERVISOR_ECALL_EXP
+#else
 	li t1, SOC_MCAUSE_ECALL_EXP
+#endif
 
 	/*
 	 * If mcause == SOC_MCAUSE_ECALL_EXP, handle system call from
@@ -439,7 +457,7 @@ is_priv_sp:
 is_kernel_syscall:
 #ifdef CONFIG_USERSPACE
 	/* Check if it is a return from user syscall */
-	csrr t0, mepc
+	csrr t0, CSR_EPC
 	la t1, z_riscv_do_syscall_start
 	bltu t0, t1, not_user_syscall
 	la t1, z_riscv_do_syscall_end
@@ -473,11 +491,13 @@ not_user_syscall:
 
 #ifdef CONFIG_PMP_STACK_GUARD
 	li t0, MSTATUS_MPRV
-	csrs mstatus, t0
+	csrs CSR_STATUS, t0
+#endif /* CONFIG_PMP_STACK_GUARD */
 
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/* Move to current thread SP and move ESF */
-	csrrw sp, mscratch, sp
-	csrr t0, mscratch
+	csrrw sp, CSR_SCRATCH, sp
+	csrr t0, CSR_SCRATCH
 	addi sp, sp, -__z_arch_esf_t_SIZEOF
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	RV_OP_LOADREG t1, __z_arch_esf_t_fp_state_OFFSET(t0)
@@ -489,7 +509,7 @@ skip_fp_move_kernel_syscall:
 
 	COPY_ESF(sp, t0, t1)
 	addi t0, t0, __z_arch_esf_t_SIZEOF
-	csrw mscratch, t0
+	csrw CSR_SCRATCH, t0
 #endif /* CONFIG_PMP_STACK_GUARD */
 
 #ifdef CONFIG_USERSPACE
@@ -544,13 +564,13 @@ is_user_syscall:
 	RV_OP_LOADREG t1, __z_arch_esf_t_mepc_OFFSET(sp)
 	addi t1, t1, 4
 	RV_OP_STOREREG t1, __z_arch_esf_t_mepc_OFFSET(sp)
-#ifdef CONFIG_PMP_STACK_GUARD
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/*
 	 * Copy ESF to user stack in case of rescheduling
 	 * directly from kernel ECALL (nested ECALL)
 	 */
-	csrrw sp, mscratch, sp
-	csrr t0, mscratch
+	csrrw sp, CSR_SCRATCH, sp
+	csrr t0, CSR_SCRATCH
 	addi sp, sp, -__z_arch_esf_t_SIZEOF
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	RV_OP_LOADREG t1, __z_arch_esf_t_fp_state_OFFSET(t0)
@@ -590,11 +610,11 @@ valid_syscall_id:
 
 	/* Prepare to jump into do_syscall function */
 	la t0, z_riscv_do_syscall
-	csrw mepc, t0
+	csrw CSR_EPC, t0
 
 	/* Force kernel mode for syscall execution */
-	li t0, MSTATUS_MPP
-	csrs mstatus, t0
+	li t0, SSTATUS_SPP
+	csrs CSR_STATUS, t0
 	SOC_ERET
 
 return_from_syscall:
@@ -613,9 +633,9 @@ no_reschedule_from_fault:
 	/* Update a0 (return value) */
 	RV_OP_STOREREG a0, __z_arch_esf_t_a0_OFFSET(sp)
 
-#ifdef CONFIG_PMP_STACK_GUARD
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/* Move to IRQ stack start */
-	csrw mscratch, sp /* Save user sp */
+	csrw CSR_SCRATCH, sp /* Save user sp */
 	la t2, z_interrupt_stacks
 	li t3, CONFIG_ISR_STACK_SIZE
 	add sp, t2, t3
@@ -624,7 +644,7 @@ no_reschedule_from_fault:
 	 * Copy ESF to IRQ stack from user stack
 	 * to execute "no_reschedule" properly.
 	 */
-	csrr t0, mscratch
+	csrr t0, CSR_SCRATCH
 	addi sp, sp, -__z_arch_esf_t_SIZEOF
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	RV_OP_LOADREG t1, __z_arch_esf_t_fp_state_OFFSET(t0)
@@ -699,7 +719,7 @@ call_irq:
 #endif
 
 	/* Get IRQ causing interrupt */
-	csrr a0, mcause
+	csrr a0, CSR_CAUSE
 	li t0, SOC_MCAUSE_EXP_MASK
 	and a0, a0, t0
 
@@ -766,14 +786,16 @@ on_thread_stack:
 
 #ifdef CONFIG_PMP_STACK_GUARD
 	RV_OP_LOADREG a0, _kernel_offset_to_current(t1)
-	jal ra, z_riscv_configure_stack_guard
+    jal ra, z_riscv_configure_stack_guard
+#endif /* CONFIG_PMP_STACK_GUARD */
 
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/*
 	 * Move to saved SP and move ESF to retrieve it
 	 * after reschedule.
 	 */
-	csrrw sp, mscratch, sp
-	csrr t0, mscratch
+	csrrw sp, CSR_SCRATCH, sp
+	csrr t0, CSR_SCRATCH
 	addi sp, sp, -__z_arch_esf_t_SIZEOF
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	RV_OP_LOADREG t1, __z_arch_esf_t_fp_state_OFFSET(t0)
@@ -784,7 +806,7 @@ skip_fp_move_irq:
 #endif /* CONFIG_FPU && CONFIG_FPU_SHARING */
 	COPY_ESF(sp, t0, t1)
 	addi t0, t0, __z_arch_esf_t_SIZEOF
-	csrw mscratch, t0
+	csrw CSR_SCRATCH, t0
 #endif /* CONFIG_PMP_STACK_GUARD */
 
 #ifdef CONFIG_USERSPACE
@@ -859,7 +881,7 @@ skip_store_fp_callee_saved:
 #endif /* CONFIG_FPU && CONFIG_FPU_SHARING */
 
 skip_callee_saved_reg:
-#ifdef CONFIG_PMP_STACK_GUARD
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
 	/*
 	 * Reset mscratch value because is simpler
 	 * than remove user ESF, and prevent unknown corner cases
@@ -867,7 +889,7 @@ skip_callee_saved_reg:
 	la t2, z_interrupt_stacks
 	li t3, CONFIG_ISR_STACK_SIZE
 	add t2, t2, t3
-	csrw mscratch, t2
+	csrw CSR_SCRATCH, t2
 
 #endif /* CONFIG_PMP_STACK_GUARD */
 
@@ -930,11 +952,13 @@ skip_load_fp_callee_saved:
 	/* Switch to user stack */
 	RV_OP_LOADREG sp, _thread_offset_to_user_sp(t1)
 
+#ifdef CONFIG_PMP_STACK_GUARD
 	/* Setup User allowed stack */
 	li t0, MSTATUS_MPRV
-	csrc mstatus, t0
+	csrc CSR_STATUS, t0
 	mv a0, t1
 	jal ra, z_riscv_configure_user_allowed_stack
+#endif /* CONFIG_PMP_STACK_GUARD */
 
 	/* Set user mode variable */
 	li t2, 0x1
@@ -956,11 +980,11 @@ kernel_swap:
 
 	/* Restore MEPC register */
 	RV_OP_LOADREG t0, __z_arch_esf_t_mepc_OFFSET(sp)
-	csrw mepc, t0
+	csrw CSR_EPC, t0
 
 	/* Restore SOC-specific MSTATUS register */
 	RV_OP_LOADREG t0, __z_arch_esf_t_mstatus_OFFSET(sp)
-	csrw mstatus, t0
+	csrw CSR_STATUS, t0
 
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	/*
@@ -989,8 +1013,10 @@ no_reschedule:
 	WAS_NOT_USER(t2, t4)
 	bnez t2, no_enter_user
 
+#ifdef CONFIG_PMP_STACK_GUARD
 	li t0, MSTATUS_MPRV
-	csrc mstatus, t0
+	csrc CSR_STATUS, t0
+#endif /* CONFIG_PMP_STACK_GUARD */
 
 	la t0, _kernel
 	RV_OP_LOADREG a0, _kernel_offset_to_current(t0)
@@ -1006,9 +1032,9 @@ no_reschedule:
 	bnez t0, no_enter_user
 
 	/* Clear ESF saved in User Stack */
-	csrr t0, mscratch
+	csrr t0, CSR_SCRATCH
 	addi t0, t0, __z_arch_esf_t_SIZEOF
-	csrw mscratch, t0
+	csrw CSR_SCRATCH, t0
 
 no_enter_user:
 #endif /* CONFIG_USERSPACE */
@@ -1021,11 +1047,11 @@ no_enter_user:
 
 	/* Restore MEPC register */
 	RV_OP_LOADREG t0, __z_arch_esf_t_mepc_OFFSET(sp)
-	csrw mepc, t0
+	csrw CSR_EPC, t0
 
 	/* Restore SOC-specific MSTATUS register */
 	RV_OP_LOADREG t0, __z_arch_esf_t_mstatus_OFFSET(sp)
-	csrw mstatus, t0
+	csrw CSR_STATUS, t0
 
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
 	/*
@@ -1043,8 +1069,8 @@ skip_load_fp_caller_saved:
 	/* Restore caller-saved registers from thread stack */
 	LOAD_CALLER_SAVED()
 
-#ifdef CONFIG_PMP_STACK_GUARD
-	csrrw sp, mscratch, sp
+#if defined(CONFIG_RISCV_SUPERVISOR) || defined(CONFIG_PMP_STACK_GUARD)
+	csrrw sp, CSR_SCRATCH, sp
 #endif /* CONFIG_PMP_STACK_GUARD */
 	/* Call SOC_ERET to exit ISR */
 	SOC_ERET

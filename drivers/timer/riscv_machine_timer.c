@@ -77,18 +77,35 @@ static void timer_isr(const void *arg)
 
 	k_spin_unlock(&lock, key);
 	sys_clock_announce(IS_ENABLED(CONFIG_TICKLESS_KERNEL) ? dticks : 1);
+
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	arch_syscall_invoke2(MIP_STIP, MIP_MTIP, SET_MIP_MIE_SYSCALL_ID);
+#endif
+
+	return;
 }
 
 int sys_clock_driver_init(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
-	IRQ_CONNECT(RISCV_MACHINE_TIMER_IRQ, 0, timer_isr, NULL, 0);
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	const int32_t irq = RISCV_SUPERVISOR_TIMER_IRQ;
+#else
+	const int32_t irq = RISCV_MACHINE_TIMER_IRQ;
+#endif
+	IRQ_CONNECT(irq, 0, timer_isr, NULL, 0);
 	last_count = mtime();
 	set_mtimecmp(last_count + CYC_PER_TICK);
-	irq_enable(RISCV_MACHINE_TIMER_IRQ);
+	irq_enable(irq);
+
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	arch_syscall_invoke2(MIP_STIP, MIP_MTIP, SET_MIP_MIE_SYSCALL_ID);
+#endif
+
 	return 0;
 }
+
 
 void sys_clock_set_timeout(int32_t ticks, bool idle)
 {

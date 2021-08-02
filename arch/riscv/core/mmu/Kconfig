@@ -1,0 +1,9 @@
+#
+# Copyright (c) 2021 Recogni, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config RISCV_MMU_DEBUG
+	bool "Build with debugging of MMU initialization enabled, including an early unconditional ebreak after switching to supervisor mode"
+	default n

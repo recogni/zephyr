@@ -124,6 +124,10 @@ config GEN_IRQ_VECTOR_TABLE
 config NUM_IRQS
 	int
 
+config RISCV_SUPERVISOR
+	bool "Run the kernel in supervisor mode instead of machine mode"
+	default n
+
 menuconfig RISCV_PMP
 	bool "RISC-V PMP Support"
 	default n
@@ -141,6 +145,22 @@ menuconfig RISCV_PMP
 if RISCV_PMP
 source "arch/riscv/core/pmp/Kconfig"
 endif #RISCV_PMP
+
+menuconfig RISCV_MMU
+	bool "RISC-V MMU Support"
+	default n
+	select RISCV_SUPERVISOR
+	select THREAD_STACK_INFO
+	select CPU_HAS_MMU
+	select MMU
+	select SRAM_REGION_PERMISSIONS
+	select ARCH_MEM_DOMAIN_SYNCHRONOUS_API if USERSPACE
+	help
+	  MMU implements Memory Management Unit protection.
+
+if RISCV_MMU
+source "arch/riscv/core/mmu/Kconfig"
+endif #RISCV_MMU
 
 endmenu
 

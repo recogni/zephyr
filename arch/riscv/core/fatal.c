@@ -11,13 +11,18 @@
 #include <logging/log.h>
 LOG_MODULE_DECLARE(os, CONFIG_KERNEL_LOG_LEVEL);
 
-#ifdef CONFIG_USERSPACE
+#if defined(CONFIG_RISCV_SUPERVISOR) && !defined(CONFIG_LOG)
+#undef LOG_ERR
+#define LOG_ERR(fmt, ...) printk(fmt "\n", ##__VA_ARGS__)
+#endif
+
+#if defined(CONFIG_USERSPACE) && defined(CONFIG_RISCV_PMP)
 Z_EXC_DECLARE(z_riscv_user_string_nlen);
 
 static const struct z_exc_handle exceptions[] = {
 	Z_EXC_HANDLE(z_riscv_user_string_nlen),
 };
-#endif /* CONFIG_USERSPACE */
+#endif /* CONFIG_USERSPACE && CONFIG_RISCV_PMP */
 
 #if __riscv_xlen == 32
  #define PR_REG "%08" PRIxPTR
@@ -88,7 +93,7 @@ static char *cause_str(ulong_t cause)
 
 void _Fault(z_arch_esf_t *esf)
 {
-#ifdef CONFIG_USERSPACE
+#if defined(CONFIG_USERSPACE) && defined(CONFIG_RISCV_PMP)
 	/*
 	 * Perform an assessment whether an PMP fault shall be
 	 * treated as recoverable.
@@ -102,10 +107,14 @@ void _Fault(z_arch_esf_t *esf)
 			return;
 		}
 	}
-#endif /* CONFIG_USERSPACE */
+#endif /* CONFIG_USERSPACE && CONFIG_RISCV_PMP */
 	ulong_t mcause;
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	__asm__ volatile("csrr %0, scause" : "=r" (mcause));
+#else
 	__asm__ volatile("csrr %0, mcause" : "=r" (mcause));
+#endif
 
 #ifndef CONFIG_SOC_OPENISA_RV32M1_RISCV32
 	ulong_t mtval;
@@ -117,16 +126,29 @@ void _Fault(z_arch_esf_t *esf)
 #if defined(CONFIG_SCORPIO_MIPIRX) && !defined(__clang__)
 	__asm__ volatile("csrr %0, mbadaddr" : "=r" (mtval));
 #else
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	__asm__ volatile("csrr %0, stval" : "=r" (mtval));
+#else
 	__asm__ volatile("csrr %0, mtval" : "=r" (mtval));
+#endif
 #endif
 
 #endif
 
 	mcause &= SOC_MCAUSE_EXP_MASK;
 	LOG_ERR("");
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	LOG_ERR(" scause: %ld, %s", mcause, cause_str(mcause));
+#else
 	LOG_ERR(" mcause: %ld, %s", mcause, cause_str(mcause));
+#endif
+
 #ifndef CONFIG_SOC_OPENISA_RV32M1_RISCV32
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	LOG_ERR("  stval: %lx", mtval);
+#else
 	LOG_ERR("  mtval: %lx", mtval);
+#endif
 #endif
 
 	z_riscv_fatal_error(K_ERR_CPU_EXCEPTION, esf);

@@ -76,7 +76,7 @@ void arch_new_thread(struct k_thread *thread, k_thread_stack_t *stack,
 	 */
 	stack_init->mstatus = MSTATUS_DEF_RESTORE;
 
-#if defined(CONFIG_PMP_STACK_GUARD) || defined(CONFIG_USERSPACE)
+#if defined(CONFIG_PMP_STACK_GUARD) && defined(CONFIG_USERSPACE)
 	z_riscv_pmp_init_thread(thread);
 #endif /* CONFIG_PMP_STACK_GUARD || CONFIG_USERSPACE */
 
@@ -225,7 +225,7 @@ FUNC_NORETURN void z_riscv_user_mode_enter_syscall(k_thread_entry_t user_entry,
 			(uint32_t)z_priv_stack_find(_current->stack_obj);
 #else
 		_current->arch.priv_stack_start =
-			(uint32_t)(_current->stack_obj) +
+			(uintptr_t)(_current->stack_obj) +
 			Z_RISCV_STACK_GUARD_SIZE;
 #endif /* CONFIG_GEN_PRIV_STACKS */
 
@@ -233,14 +233,20 @@ FUNC_NORETURN void z_riscv_user_mode_enter_syscall(k_thread_entry_t user_entry,
 				_current->stack_info.start +
 				_current->stack_info.size -
 				_current->stack_info.delta);
-
 	/* Set next CPU status to user mode */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	status = csr_read(sstatus);
+	status = INSERT_FIELD(status, MSTATUS_SPP, PRV_U);
+	csr_write(sstatus, status);
+	csr_write(sepc, z_thread_entry_wrapper);
+#else
 	status = csr_read(mstatus);
 	status = INSERT_FIELD(status, MSTATUS_MPP, PRV_U);
 	status = INSERT_FIELD(status, MSTATUS_MPRV, 0);
-
 	csr_write(mstatus, status);
 	csr_write(mepc, z_thread_entry_wrapper);
+#endif
+
 
 	/* Set up Physical Memory Protection */
 #if defined(CONFIG_PMP_STACK_GUARD)
@@ -277,7 +283,11 @@ FUNC_NORETURN void z_riscv_user_mode_enter_syscall(k_thread_entry_t user_entry,
 			  : "r" (top_of_user_stack)
 			  : "memory");
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	__asm__ volatile ("sret");
+#else
 	__asm__ volatile ("mret");
+#endif
 
 	CODE_UNREACHABLE;
 }

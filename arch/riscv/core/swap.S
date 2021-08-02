@@ -24,6 +24,9 @@ GTEXT(z_thread_entry_wrapper)
 SECTION_FUNC(exception.other, arch_swap)
 
 	/* Make a system call to perform context switch */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	li a7, NO_SYSCALL_ID
+#endif
 	ecall
 
 	/*
@@ -47,8 +50,13 @@ SECTION_FUNC(exception.other, arch_swap)
 	 * Unlock irq, following IRQ lock state in a0 register.
 	 * Use atomic instruction csrrs to do so.
 	 */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	andi a0, a0, SSTATUS_IEN
+	csrrs t0, sstatus, a0
+#else
 	andi a0, a0, MSTATUS_IEN
 	csrrs t0, mstatus, a0
+#endif /* CONFIG_RISCV_SUPERVISOR */
 
 	/* Set value of return register a0 to value of register t2 */
 	addi a0, t2, 0
