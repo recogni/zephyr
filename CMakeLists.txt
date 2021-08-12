@@ -618,6 +618,12 @@ add_custom_command(OUTPUT include/generated/syscall_dispatch.c ${syscall_list_h}
   --syscall-list     ${syscall_list_h}
   ${SYSCALL_LONG_REGISTERS_ARG}
   ${SYSCALL_SPLIT_TIMEOUT_ARG}
+  COMMAND
+  sed
+  -i
+  -E
+  "'/\\sk_thread_create/!b;n;a \\tif ((uintptr_t)stack & (1ull << 40)) {\\n\\t\\tstack = (k_thread_stack_t *)((uintptr_t)stack | (1ull << 39));\\n\\t}'"
+  include/generated/syscalls/kernel.h
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${PARSE_SYSCALLS_TARGET}
   )
