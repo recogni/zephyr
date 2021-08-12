@@ -485,7 +485,7 @@ const struct shell_transport_api shell_telnet_transport_api = {
 	.read = read
 };
 
-static int enable_shell_telnet(const struct device *arg)
+int enable_shell_telnet(const struct device *arg)
 {
 	ARG_UNUSED(arg);
 
@@ -496,7 +496,7 @@ static int enable_shell_telnet(const struct device *arg)
 	return shell_init(&shell_telnet, NULL, true, log_backend, level);
 }
 
-SYS_INIT(enable_shell_telnet, APPLICATION, 0);
+// SYS_INIT(enable_shell_telnet, APPLICATION, 0);
 
 const struct shell *shell_backend_telnet_get_ptr(void)
 {
