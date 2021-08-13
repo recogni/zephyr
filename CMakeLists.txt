@@ -607,6 +607,7 @@ if(CONFIG_TIMEOUT_64BIT)
   set(SYSCALL_SPLIT_TIMEOUT_ARG --split-type k_timeout_t)
 endif()
 
+if(CONFIG_BOARD_SCORPIO)
 add_custom_command(OUTPUT include/generated/syscall_dispatch.c ${syscall_list_h}
   # Also, some files are written to include/generated/syscalls/
   COMMAND
@@ -627,6 +628,22 @@ add_custom_command(OUTPUT include/generated/syscall_dispatch.c ${syscall_list_h}
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${PARSE_SYSCALLS_TARGET}
   )
+else()
+add_custom_command(OUTPUT include/generated/syscall_dispatch.c ${syscall_list_h}
+  # Also, some files are written to include/generated/syscalls/
+  COMMAND
+  ${PYTHON_EXECUTABLE}
+  ${ZEPHYR_BASE}/scripts/gen_syscalls.py
+  --json-file        ${syscalls_json}                     # Read this file
+  --base-output      include/generated/syscalls           # Write to this dir
+  --syscall-dispatch include/generated/syscall_dispatch.c # Write this file
+  --syscall-list     ${syscall_list_h}
+  ${SYSCALL_LONG_REGISTERS_ARG}
+  ${SYSCALL_SPLIT_TIMEOUT_ARG}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS ${PARSE_SYSCALLS_TARGET}
+  )
+endif()
 
 # This is passed into all calls to the gen_kobject_list.py script.
 set(gen_kobject_list_include_args --include ${struct_tags_json})
