@@ -179,7 +179,6 @@ static int init(const struct shell_transport *transport,
 	sh_uart->ctrl_blk->context = context;
 
 #ifdef CONFIG_MCUMGR_SMP_SHELL
-    XXXX
 	sh_uart->ctrl_blk->smp.buf_pool = &smp_shell_rx_pool;
 	k_fifo_init(&sh_uart->ctrl_blk->smp.buf_ready);
 #endif
