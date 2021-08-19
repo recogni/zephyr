@@ -110,7 +110,6 @@ static void smp_udp_receive_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p3);
 
 	LOG_INF("Started (%s)", conf->proto);
-    printf("Starting rx thread\n");
 
 	while (1) {
 		struct sockaddr addr;
@@ -138,7 +137,6 @@ static void smp_udp_receive_thread(void *p1, void *p2, void *p3)
 			zephyr_smp_rx_req(&conf->smp_transport, nb);
 		} else if (len < 0) {
 			LOG_ERR("recvfrom error (%s): %i", conf->proto, errno);
-			printf("recvfrom error (%s): %i", conf->proto, errno);
 		}
 	}
 }
