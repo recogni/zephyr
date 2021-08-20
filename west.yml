@@ -99,8 +99,9 @@ manifest:
       path: modules/mcuboot
       remote: recogni-http
     - name: mcumgr
-      revision: 5c5055f5a7565f8152d75fcecf07262928b4d56e
+      revision: 9b1ed3cc454d27b82d68010bdc23517a42244f50
       path: modules/lib/mcumgr
+      remote: recogni-http
     - name: net-tools
       revision: f49bd1354616fae4093bf36e5eaee43c51a55127
       path: tools/net-tools
