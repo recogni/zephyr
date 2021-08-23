@@ -95,7 +95,7 @@ manifest:
       revision: 53044168b43f06ec5654b906a2cdd260bf477edd
       path: modules/crypto/mbedtls
     - name: mcuboot
-      revision: 5f0187d979f1d5dd0b6cda4e171438f662f63b24
+      revision: 8df6c9f4b4ccd2af76bf60d34de06dbd87130343
       path: modules/mcuboot
       remote: recogni-http
     - name: mcumgr
