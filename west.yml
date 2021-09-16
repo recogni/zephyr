@@ -26,8 +26,6 @@ manifest:
     - name: recogni-http
       url-base: https://github.com/recogni
 
-  #
-  # Please add items below based on alphabetical order
   projects:
     - name: fatfs
       path: modules/fs/fatfs
@@ -35,13 +33,20 @@ manifest:
       revision: 9e4498d1c73009acd84bb36036ee5e2869112a6c
       path: modules/fs/littlefs
     - name: mbedtls
-      revision: 5765cb7f75a9973ae9232d438e361a9d7bbc49e7
+      revision: d9535d4fa440b0435934e5d19c38c4010fe73e6a
       path: modules/crypto/mbedtls
+      remote: recogni-http
     - name: mcuboot
       path: modules/mcuboot
-      revision: c6eb82bc2037bfd27045f3fa9a772cacf1b0f5ad
+      revision: 99899010c6e56cd777da002ed6d48f99322117b9
       remote: recogni-http
-    
+    - name: mcumgr
+      revision: 9b1ed3cc454d27b82d68010bdc23517a42244f50
+      path: modules/lib/mcumgr
+      remote: recogni-http
+    - name: tinycbor
+      revision: 40daca97b478989884bffb5226e9ab73ca54b8c4
+      path: modules/lib/tinycbor
 
   self:
     path: zephyr
