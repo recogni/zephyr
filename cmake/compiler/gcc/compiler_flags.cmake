@@ -177,5 +177,11 @@ set_compiler_property(PROPERTY sanitize_address -fsanitize=address)
 
 set_compiler_property(PROPERTY sanitize_undefined -fsanitize=undefined)
 
+# GCC compiler flag for turning off thread-safe initialization of local statics
+set_property(TARGET compiler-cpp PROPERTY no_threadsafe_statics "-fno-threadsafe-statics")
+
 # Required ASM flags when using gcc
 set_property(TARGET asm PROPERTY required "-xassembler-with-cpp")
+
+# gcc flag for colourful diagnostic messages
+set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=always)

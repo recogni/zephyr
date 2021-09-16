@@ -26,8 +26,6 @@ manifest:
     - name: recogni-http
       url-base: https://github.com/recogni
 
-  #
-  # Please add items below based on alphabetical order
   projects:
     - name: fatfs
       path: modules/fs/fatfs
@@ -49,8 +47,6 @@ manifest:
     - name: tinycbor
       revision: 40daca97b478989884bffb5226e9ab73ca54b8c4
       path: modules/lib/tinycbor
-
-    
 
   self:
     path: zephyr

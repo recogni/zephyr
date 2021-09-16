@@ -16,6 +16,7 @@ struct video_sw_generator_data {
 	struct k_fifo fifo_in;
 	struct k_fifo fifo_out;
 	struct k_work_delayable buf_work;
+	struct k_work_sync work_sync;
 	int pattern;
 	bool ctrl_hflip;
 	bool ctrl_vflip;
@@ -63,7 +64,7 @@ static int video_sw_generator_stream_stop(const struct device *dev)
 {
 	struct video_sw_generator_data *data = dev->data;
 
-	k_work_cancel_delayable_sync(&data->buf_work);
+	k_work_cancel_delayable_sync(&data->buf_work, &data->work_sync);
 
 	return 0;
 }
@@ -274,7 +275,7 @@ static int video_sw_generator_init(const struct device *dev)
 }
 
 DEVICE_DEFINE(video_sw_generator, "VIDEO_SW_GENERATOR",
-		    &video_sw_generator_init, device_pm_control_nop,
+		    &video_sw_generator_init, NULL,
 		    &video_sw_generator_data_0, NULL,
 		    POST_KERNEL, CONFIG_VIDEO_INIT_PRIORITY,
 		    &video_sw_generator_driver_api);

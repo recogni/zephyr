@@ -27,7 +27,8 @@ config SHELL_MINIMAL
 
 config SHELL_STACK_SIZE
 	int "Shell thread stack size"
-	default 2520 if OPENTHREAD_SHELL
+	default 3168 if OPENTHREAD_SHELL && OPENTHREAD_JOINER
+	default 2616 if OPENTHREAD_SHELL
 	default 2048 if MULTITHREADING
 	default 0 if !MULTITHREADING
 	help
@@ -196,7 +197,7 @@ config SHELL_CMDS_SELECT
 
 config SHELL_LOG_BACKEND
 	bool "Enable shell log backend"
-	depends on !LOG_MINIMAL
+	depends on LOG && !LOG_MINIMAL
 	default y if LOG
 	help
 	  When enabled, backend will use the shell for logging.

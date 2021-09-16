@@ -128,7 +128,17 @@ if((NOT DEFINED ZEPHYR_BASE) AND (DEFINED ENV_ZEPHYR_BASE))
   set(ZEPHYR_BASE ${ENV_ZEPHYR_BASE} CACHE PATH "Zephyr base")
 endif()
 
-find_package(ZephyrBuildConfiguration NAMES ZephyrBuild PATHS ${ZEPHYR_BASE}/../* QUIET NO_DEFAULT_PATH NO_POLICY_SCOPE)
+find_package(ZephyrBuildConfiguration
+  QUIET NO_POLICY_SCOPE
+  NAMES ZephyrBuild
+  PATHS ${ZEPHYR_BASE}/../*
+  NO_CMAKE_PATH
+  NO_CMAKE_ENVIRONMENT_PATH
+  NO_SYSTEM_ENVIRONMENT_PATH
+  NO_CMAKE_PACKAGE_REGISTRY
+  NO_CMAKE_SYSTEM_PATH
+  NO_CMAKE_SYSTEM_PACKAGE_REGISTRY
+)
 
 # Note any later project() resets PROJECT_SOURCE_DIR
 file(TO_CMAKE_PATH "${ZEPHYR_BASE}" PROJECT_SOURCE_DIR)
@@ -147,6 +157,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${AUTOCONF_H})
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(${ZEPHYR_BASE}/cmake/extensions.cmake)
+include(${ZEPHYR_BASE}/cmake/git.cmake)
 include(${ZEPHYR_BASE}/cmake/version.cmake)  # depends on hex.cmake
 
 #
@@ -155,7 +166,6 @@ include(${ZEPHYR_BASE}/cmake/version.cmake)  # depends on hex.cmake
 
 include(${ZEPHYR_BASE}/cmake/python.cmake)
 include(${ZEPHYR_BASE}/cmake/west.cmake)
-include(${ZEPHYR_BASE}/cmake/git.cmake)  # depends on version.cmake
 include(${ZEPHYR_BASE}/cmake/ccache.cmake)
 
 if(ZEPHYR_EXTRA_MODULES)
@@ -654,8 +664,6 @@ endif()
 #
 # Currently used properties:
 # - COMPILES_OPTIONS: Used by application memory partition feature
-# - ${TARGET}_DEPENDENCIES: additional dependencies for targets that need them
-#   like flash (FLASH_DEPENDENCIES), debug (DEBUG_DEPENDENCIES), etc.
 add_custom_target(zephyr_property_target)
 
 # "app" is a CMake library containing all the application code and is

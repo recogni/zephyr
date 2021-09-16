@@ -42,7 +42,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include "ieee802154_nrf5.h"
 #include "nrf_802154.h"
 
-#ifdef CONFIG_NRF_802154_SER_HOST
+#if defined(CONFIG_NRF_802154_SER_HOST)
 #include "nrf_802154_serialization_error.h"
 #endif
 
@@ -199,9 +199,7 @@ drop:
 		nrf_802154_buffer_free_raw(rx_frame->psdu);
 		rx_frame->psdu = NULL;
 
-		if (pkt) {
-			net_pkt_unref(pkt);
-		}
+		net_pkt_unref(pkt);
 	}
 }
 
@@ -360,9 +358,15 @@ static int nrf5_set_txpower(const struct device *dev, int16_t dbm)
 
 static int handle_ack(struct nrf5_802154_data *nrf5_radio)
 {
-	uint8_t ack_len = nrf5_radio->ack_frame.psdu[0] - NRF5_FCS_LENGTH;
+	uint8_t ack_len;
 	struct net_pkt *ack_pkt;
 	int err = 0;
+
+	if (IS_ENABLED(CONFIG_IEEE802154_RAW_MODE) || IS_ENABLED(CONFIG_NET_L2_OPENTHREAD)) {
+		ack_len = nrf5_radio->ack_frame.psdu[0];
+	} else {
+		ack_len = nrf5_radio->ack_frame.psdu[0] - NRF5_FCS_LENGTH;
+	}
 
 	ack_pkt = net_pkt_alloc_with_buffer(nrf5_radio->iface, ack_len,
 					    AF_UNSPEC, 0, K_NO_WAIT);
@@ -511,6 +515,13 @@ static int nrf5_tx(const struct device *dev,
 	}
 
 	return -EIO;
+}
+
+static uint64_t nrf5_get_time(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return nrf_802154_time_get();
 }
 
 static int nrf5_start(const struct device *dev)
@@ -705,8 +716,10 @@ void nrf_802154_received_timestamp_raw(uint8_t *data, int8_t power, uint8_t lqi,
 	__ASSERT(false, "Not enough rx frames allocated for 15.4 driver");
 }
 
-void nrf_802154_receive_failed(nrf_802154_rx_error_t error)
+void nrf_802154_receive_failed(nrf_802154_rx_error_t error, uint32_t id)
 {
+	ARG_UNUSED(id);
+
 	enum ieee802154_rx_fail_reason reason;
 
 	switch (error) {
@@ -805,7 +818,7 @@ void nrf_802154_energy_detection_failed(nrf_802154_ed_error_t error)
 	}
 }
 
-#ifdef CONFIG_NRF_802154_SER_HOST
+#if defined(CONFIG_NRF_802154_SER_HOST)
 void nrf_802154_serialization_error(const nrf_802154_ser_err_data_t *p_err)
 {
 	__ASSERT(false, "802.15.4 serialization error");
@@ -828,6 +841,7 @@ static struct ieee802154_radio_api nrf5_radio_api = {
 	.stop = nrf5_stop,
 	.tx = nrf5_tx,
 	.ed_scan = nrf5_energy_scan_start,
+	.get_time = nrf5_get_time,
 	.configure = nrf5_configure,
 };
 
@@ -843,13 +857,13 @@ static struct ieee802154_radio_api nrf5_radio_api = {
 
 #if defined(CONFIG_NET_L2_IEEE802154) || defined(CONFIG_NET_L2_OPENTHREAD)
 NET_DEVICE_INIT(nrf5_154_radio, CONFIG_IEEE802154_NRF5_DRV_NAME,
-		nrf5_init, device_pm_control_nop, &nrf5_data, &nrf5_radio_cfg,
+		nrf5_init, NULL, &nrf5_data, &nrf5_radio_cfg,
 		CONFIG_IEEE802154_NRF5_INIT_PRIO,
 		&nrf5_radio_api, L2,
 		L2_CTX_TYPE, MTU);
 #else
 DEVICE_DEFINE(nrf5_154_radio, CONFIG_IEEE802154_NRF5_DRV_NAME,
-		nrf5_init, device_pm_control_nop, &nrf5_data, &nrf5_radio_cfg,
+		nrf5_init, NULL, &nrf5_data, &nrf5_radio_cfg,
 		POST_KERNEL, CONFIG_IEEE802154_NRF5_INIT_PRIO,
 		&nrf5_radio_api);
 #endif

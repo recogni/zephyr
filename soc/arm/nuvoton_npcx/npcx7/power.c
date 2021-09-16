@@ -45,9 +45,10 @@
  * INCLUDE FILES: soc_clock.h
  */
 
+#include <arch/arm/aarch32/cortex_m/cmsis.h>
 #include <zephyr.h>
 #include <drivers/espi.h>
-#include <power/power.h>
+#include <pm/pm.h>
 #include <soc.h>
 
 #include "soc_host.h"
@@ -118,8 +119,15 @@ static void npcx_power_enter_system_sleep(int slp_mode, int wk_mode)
 	npcx_clock_control_turn_on_system_sleep(slp_mode == NPCX_DEEP_SLEEP,
 					wk_mode == NPCX_INSTANT_WAKE_UP);
 
-	/* Turn on host access wake-up interrupt. */
-	npcx_host_enable_access_interrupt();
+	/* A bypass in npcx7 series to prevent leakage in low-voltage pads */
+	if (IS_ENABLED(CONFIG_SOC_SERIES_NPCX7)) {
+		npcx_lvol_suspend_io_pads();
+	}
+
+	/* Turn on eSPI/LPC host access wake-up interrupt. */
+	if (IS_ENABLED(CONFIG_ESPI_NPCX)) {
+		npcx_host_enable_access_interrupt();
+	}
 
 	/*
 	 * Capture the reading of low-freq timer for compensation before ec
@@ -136,8 +144,15 @@ static void npcx_power_enter_system_sleep(int slp_mode, int wk_mode)
 	 */
 	npcx_clock_compensate_system_timer();
 
-	/* Turn off host access wake-up interrupt. */
-	npcx_host_disable_access_interrupt();
+	/* Turn off eSPI/LPC host access wake-up interrupt. */
+	if (IS_ENABLED(CONFIG_ESPI_NPCX)) {
+		npcx_host_disable_access_interrupt();
+	}
+
+	/* A bypass in npcx7 series to prevent leakage in low-voltage pads */
+	if (IS_ENABLED(CONFIG_SOC_SERIES_NPCX7)) {
+		npcx_lvol_restore_io_pads();
+	}
 
 	/* Turn off system sleep mode. */
 	npcx_clock_control_turn_off_system_sleep();

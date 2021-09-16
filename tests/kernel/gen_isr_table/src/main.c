@@ -51,7 +51,7 @@ extern uint32_t _irq_vector_table[];
  * at the end of the vector table that are already used by
  * the board.
  */
-#define TEST_NUM_IRQS	30
+#define TEST_NUM_IRQS	26
 #elif defined(CONFIG_SOC_SERIES_NPCX7)
 /* In NPCX7 series, it uses some the IRQs at the end of the vector table, for
  * example, the irq 60 and 61 used for Multi-Input Wake-Up Unit (MIWU) device
@@ -59,6 +59,12 @@ extern uint32_t _irq_vector_table[];
  * test suite to solve the issue.
  */
 #define TEST_NUM_IRQS	46
+#elif defined(CONFIG_SOC_LPC55S16)
+/* IRQ 57 is reserved in the NXP LPC55S16 SoC. Thus, limit the number
+ * of interrupts reported to the test, so that it does not try to use
+ * it.
+ */
+#define TEST_NUM_IRQS	57
 #else
 #define TEST_NUM_IRQS	CONFIG_NUM_IRQS
 #endif

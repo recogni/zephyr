@@ -41,11 +41,10 @@
 
 static int init_reset(void);
 static int prepare_cb(struct lll_prepare_param *prepare_param);
-static int is_abort_cb(void *next, int prio, void *curr,
-		       lll_prepare_cb_t *resume_cb, int *resume_prio);
+static int is_abort_cb(void *next, void *curr, lll_prepare_cb_t *resume_cb);
 static void abort_cb(struct lll_prepare_param *prepare_param, void *param);
 static void ticker_stop_cb(uint32_t ticks_at_expire, uint32_t remainder, uint16_t lazy,
-			   void *param);
+			   uint8_t force, void *param);
 static void ticker_op_start_cb(uint32_t status, void *param);
 static void isr_rx(void *param);
 static void isr_tx(void *param);
@@ -124,8 +123,8 @@ static int prepare_cb(struct lll_prepare_param *prepare_param)
 	uint32_t aa = sys_cpu_to_le32(PDU_AC_ACCESS_ADDR);
 	uint32_t ticks_at_event, ticks_at_start;
 	struct node_rx_pdu *node_rx;
-	struct evt_hdr *evt;
 	uint32_t remainder_us;
+	struct ull_hdr *ull;
 	uint32_t remainder;
 
 	DEBUG_RADIO_START_O(1);
@@ -201,8 +200,8 @@ static int prepare_cb(struct lll_prepare_param *prepare_param)
 		}
 
 	ticks_at_event = prepare_param->ticks_at_expire;
-	evt = HDR_LLL2EVT(lll);
-	ticks_at_event += lll_evt_offset_get(evt);
+	ull = HDR_LLL2ULL(lll);
+	ticks_at_event += lll_event_offset_get(ull);
 
 	ticks_at_start = ticks_at_event;
 	ticks_at_start += HAL_TICKER_US_TO_TICKS(EVENT_OVERHEAD_START_US);
@@ -230,7 +229,7 @@ static int prepare_cb(struct lll_prepare_param *prepare_param)
 #if defined(CONFIG_BT_CTLR_XTAL_ADVANCED) && \
 	(EVENT_OVERHEAD_PREEMPT_US <= EVENT_OVERHEAD_PREEMPT_MIN_US)
 	/* check if preempt to start has changed */
-	if (lll_preempt_calc(evt, (TICKER_ID_SCAN_BASE +
+	if (lll_preempt_calc(ull, (TICKER_ID_SCAN_BASE +
 				   ull_scan_lll_handle_get(lll)),
 			     ticks_at_event)) {
 		radio_isr_set(isr_abort, lll);
@@ -267,17 +266,16 @@ static int prepare_cb(struct lll_prepare_param *prepare_param)
 
 static int resume_prepare_cb(struct lll_prepare_param *p)
 {
-	struct evt_hdr *evt = HDR_LLL2EVT(p->param);
+	struct ull_hdr *ull = HDR_LLL2ULL(p->param);
 
-	p->ticks_at_expire = ticker_ticks_now_get() - lll_evt_offset_get(evt);
+	p->ticks_at_expire = ticker_ticks_now_get() - lll_event_offset_get(ull);
 	p->remainder = 0;
 	p->lazy = 0;
 
 	return prepare_cb(p);
 }
 
-static int is_abort_cb(void *next, int prio, void *curr,
-		       lll_prepare_cb_t *resume_cb, int *resume_prio)
+static int is_abort_cb(void *next, void *curr, lll_prepare_cb_t *resume_cb)
 {
 	struct lll_scan *lll = curr;
 
@@ -287,7 +285,6 @@ static int is_abort_cb(void *next, int prio, void *curr,
 
 		/* wrap back after the pre-empter */
 		*resume_cb = resume_prepare_cb;
-		*resume_prio = 0; /* TODO: */
 
 		/* Retain HF clk */
 		err = lll_clk_on();
@@ -333,7 +330,7 @@ static void abort_cb(struct lll_prepare_param *prepare_param, void *param)
 }
 
 static void ticker_stop_cb(uint32_t ticks_at_expire, uint32_t remainder, uint16_t lazy,
-			   void *param)
+			   uint8_t force, void *param)
 {
 	radio_isr_set(isr_cleanup, param);
 	radio_disable();
@@ -685,7 +682,7 @@ static inline uint32_t isr_rx_pdu(struct lll_scan *lll, uint8_t devmatch_ok,
 		uint32_t conn_interval_us;
 		uint32_t conn_offset_us;
 		uint32_t conn_space_us;
-		struct evt_hdr *evt;
+		struct ull_hdr *ull;
 		uint32_t pdu_end_us;
 #if defined(CONFIG_BT_CTLR_PRIVACY)
 		bt_addr_t *lrpa;
@@ -709,8 +706,8 @@ static inline uint32_t isr_rx_pdu(struct lll_scan *lll, uint8_t devmatch_ok,
 			scan_interval_us = lll->interval * SCAN_INT_UNIT_US;
 			pdu_end_us %= scan_interval_us;
 		}
-		evt = HDR_LLL2EVT(lll);
-		if (pdu_end_us > (HAL_TICKER_TICKS_TO_US(evt->ticks_slot) -
+		ull = HDR_LLL2ULL(lll);
+		if (pdu_end_us > (HAL_TICKER_TICKS_TO_US(ull->ticks_slot) -
 				  EVENT_IFS_US - 352 - EVENT_OVERHEAD_START_US -
 				  EVENT_TICKER_RES_MARGIN_US)) {
 			return -ETIME;

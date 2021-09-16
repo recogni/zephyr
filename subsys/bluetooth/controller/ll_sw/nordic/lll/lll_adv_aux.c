@@ -188,7 +188,7 @@ static int prepare_cb(struct lll_prepare_param *p)
 	struct pdu_adv_ext_hdr *pri_hdr;
 	struct lll_adv_aux *lll;
 	struct lll_adv *lll_adv;
-	struct evt_hdr *evt;
+	struct ull_hdr *ull;
 	uint32_t remainder;
 	uint32_t start_us;
 	uint8_t *pri_dptr;
@@ -197,11 +197,6 @@ static int prepare_cb(struct lll_prepare_param *p)
 	uint32_t aa;
 
 	DEBUG_RADIO_START_A(1);
-
-#if !defined(BT_CTLR_ADV_EXT_PBACK)
-	/* Set up Radio H/W */
-	radio_reset();
-#endif  /* !BT_CTLR_ADV_EXT_PBACK */
 
 	lll = p->param;
 
@@ -218,6 +213,13 @@ static int prepare_cb(struct lll_prepare_param *p)
 	pri_com_hdr = (void *)&pri_pdu->adv_ext_ind;
 	pri_hdr = (void *)pri_com_hdr->ext_hdr_adv_data;
 	pri_dptr = pri_hdr->data;
+
+	/* NOTE: We shall be here in auxiliary PDU prepare due to
+	 * aux_ptr flag being set in the extended common header
+	 * flags. Hence, ext_hdr_len is non-zero, an explicit check
+	 * is not needed.
+	 */
+	LL_ASSERT(pri_com_hdr->ext_hdr_len);
 
 	/* traverse through adv_addr, if present */
 	if (pri_hdr->adv_addr) {
@@ -239,6 +241,8 @@ static int prepare_cb(struct lll_prepare_param *p)
 		return 0;
 	}
 
+	/* Set up Radio H/W */
+	radio_reset();
 
 #if defined(CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL)
 	radio_tx_power_set(lll->tx_pwr_lvl);
@@ -252,13 +256,11 @@ static int prepare_cb(struct lll_prepare_param *p)
 	radio_phy_set(phy_s, 1);
 	radio_pkt_configure(8, PDU_AC_PAYLOAD_SIZE_MAX, (phy_s << 1));
 
-#if !defined(BT_CTLR_ADV_EXT_PBACK)
 	/* Access address and CRC */
 	aa = sys_cpu_to_le32(PDU_AC_ACCESS_ADDR);
 	radio_aa_set((uint8_t *)&aa);
 	radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)),
 			    0x555555);
-#endif  /* !BT_CTLR_ADV_EXT_PBACK */
 
 	/* Use channel idx in aux_ptr */
 	lll_chan_set(aux_ptr->chan_idx);
@@ -297,21 +299,15 @@ static int prepare_cb(struct lll_prepare_param *p)
 		radio_switch_complete_and_disable();
 	}
 
-#if defined(BT_CTLR_ADV_EXT_PBACK)
-	start_us = 1000;
-	radio_tmr_start_us(1, start_us);
-#else /* !BT_CTLR_ADV_EXT_PBACK */
-
 	ticks_at_event = p->ticks_at_expire;
-	evt = HDR_LLL2EVT(lll);
-	ticks_at_event += lll_evt_offset_get(evt);
+	ull = HDR_LLL2ULL(lll);
+	ticks_at_event += lll_event_offset_get(ull);
 
 	ticks_at_start = ticks_at_event;
 	ticks_at_start += HAL_TICKER_US_TO_TICKS(EVENT_OVERHEAD_START_US);
 
 	remainder = p->remainder;
 	start_us = radio_tmr_start(1, ticks_at_start, remainder);
-#endif /* !BT_CTLR_ADV_EXT_PBACK */
 
 	/* capture end of Tx-ed PDU, used to calculate HCTO. */
 	radio_tmr_end_capture();
@@ -327,7 +323,7 @@ static int prepare_cb(struct lll_prepare_param *p)
 #if defined(CONFIG_BT_CTLR_XTAL_ADVANCED) && \
 	(EVENT_OVERHEAD_PREEMPT_US <= EVENT_OVERHEAD_PREEMPT_MIN_US)
 	/* check if preempt to start has changed */
-	if (lll_preempt_calc(evt, (TICKER_ID_ADV_AUX_BASE +
+	if (lll_preempt_calc(ull, (TICKER_ID_ADV_AUX_BASE +
 				   ull_adv_aux_lll_handle_get(lll)),
 			     ticks_at_event)) {
 		radio_isr_set(lll_isr_abort, lll);

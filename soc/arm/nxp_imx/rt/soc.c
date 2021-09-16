@@ -59,7 +59,11 @@ const clock_enet_pll_config_t ethPllConfig = {
 #ifdef CONFIG_ETH_MCUX
 	.enableClkOutput = true,
 #endif
+#if defined(CONFIG_PTP_CLOCK_MCUX)
+	.enableClkOutput25M = true,
+#else
 	.enableClkOutput25M = false,
+#endif
 	.loopDivider = 1,
 };
 #endif
@@ -216,7 +220,9 @@ static ALWAYS_INLINE void clock_init(void)
 	CLOCK_SetMux(kCLOCK_CanMux, 2); /* Set Can clock source. */
 #endif
 
-#if defined(CONFIG_MEMC_MCUX_FLEXSPI) && DT_NODE_HAS_STATUS(DT_NODELABEL(flexspi), okay)
+#if !(defined(CONFIG_CODE_FLEXSPI) || defined(CONFIG_CODE_FLEXSPI2)) && \
+	defined(CONFIG_MEMC_MCUX_FLEXSPI) && \
+	DT_NODE_HAS_STATUS(DT_NODELABEL(flexspi), okay)
 	CLOCK_DisableClock(kCLOCK_FlexSpi);
 	CLOCK_InitUsb1Pfd(kCLOCK_Pfd0, 24);
 	CLOCK_SetMux(kCLOCK_FlexspiMux, 3);

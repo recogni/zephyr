@@ -514,6 +514,15 @@ endfunction()
 # constructor but must called explicitly on CMake libraries that do
 # not use a zephyr library constructor.
 function(zephyr_append_cmake_library library)
+  if(TARGET zephyr_prebuilt)
+    message(WARNING
+      "zephyr_library() or zephyr_library_named() called in Zephyr CMake "
+      "application mode. `${library}` will not be treated as a Zephyr library."
+      "To create a Zephyr library in Zephyr CMake kernel mode consider "
+      "creating a Zephyr module. See more here: "
+      "https://docs.zephyrproject.org/latest/guides/modules.html"
+    )
+  endif()
   set_property(GLOBAL APPEND PROPERTY ZEPHYR_LIBS ${library})
 endfunction()
 
@@ -1057,7 +1066,7 @@ endfunction()
 function(zephyr_check_compiler_flag_hardcoded lang option check exists)
   # Various flags that are not supported for CXX may not be testable
   # because they would produce a warning instead of an error during
-  # the test.  Exclude them by toolchain-specific blacklist.
+  # the test.  Exclude them by toolchain-specific blocklist.
   if((${lang} STREQUAL CXX) AND ("${option}" IN_LIST CXX_EXCLUDED_OPTIONS))
     set(check 0 PARENT_SCOPE)
     set(exists 1 PARENT_SCOPE)

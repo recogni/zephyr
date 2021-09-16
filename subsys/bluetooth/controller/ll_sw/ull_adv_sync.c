@@ -71,7 +71,7 @@ static inline void sync_info_offset_fill(struct pdu_adv_sync_info *si,
 					 uint32_t ticks_offset,
 					 uint32_t start_us);
 static void ticker_cb(uint32_t ticks_at_expire, uint32_t remainder,
-		      uint16_t lazy, void *param);
+		      uint16_t lazy, uint8_t force, void *param);
 static void ticker_op_cb(uint32_t status, void *param);
 
 static struct ll_adv_sync_set ll_adv_sync_pool[CONFIG_BT_CTLR_ADV_SYNC_SET];
@@ -156,7 +156,7 @@ uint8_t ll_adv_sync_param_set(uint8_t handle, uint16_t interval, uint16_t flags)
 
 		ter_pdu->len = ter_len;
 	} else {
-		sync = (void *)HDR_LLL2EVT(lll_sync);
+		sync = HDR_LLL2ULL(lll_sync);
 	}
 
 	sync->interval = interval;
@@ -232,7 +232,7 @@ uint8_t ll_adv_sync_enable(uint8_t handle, uint8_t enable)
 		return BT_HCI_ERR_UNKNOWN_ADV_IDENTIFIER;
 	}
 
-	sync = (void *)HDR_LLL2EVT(lll_sync);
+	sync = HDR_LLL2ULL(lll_sync);
 
 	if (!enable) {
 		if (!sync->is_enabled) {
@@ -290,12 +290,12 @@ uint8_t ll_adv_sync_enable(uint8_t handle, uint8_t enable)
 			aux = NULL;
 		} else {
 			lll_aux = adv->lll.aux;
-			aux = (void *)HDR_LLL2EVT(lll_aux);
+			aux = HDR_LLL2ULL(lll_aux);
 			ticks_anchor_aux = ticker_ticks_now_get();
 			ticks_slot_overhead_aux = ull_adv_aux_evt_init(aux);
 			ticks_anchor_sync =
 				ticks_anchor_aux + ticks_slot_overhead_aux +
-				aux->evt.ticks_slot +
+				aux->ull.ticks_slot +
 				HAL_TICKER_US_TO_TICKS(EVENT_MAFS_US);
 		}
 
@@ -395,16 +395,16 @@ uint32_t ull_adv_sync_start(struct ll_adv_set *adv,
 #endif /* CONFIG_BT_CTLR_DF_ADV_CTE_TX */
 
 	/* TODO: active_to_start feature port */
-	sync->evt.ticks_active_to_start = 0;
-	sync->evt.ticks_xtal_to_start =
+	sync->ull.ticks_active_to_start = 0;
+	sync->ull.ticks_prepare_to_start =
 		HAL_TICKER_US_TO_TICKS(EVENT_OVERHEAD_XTAL_US);
-	sync->evt.ticks_preempt_to_start =
+	sync->ull.ticks_preempt_to_start =
 		HAL_TICKER_US_TO_TICKS(EVENT_OVERHEAD_PREEMPT_MIN_US);
-	sync->evt.ticks_slot = HAL_TICKER_US_TO_TICKS(slot_us);
+	sync->ull.ticks_slot = HAL_TICKER_US_TO_TICKS(slot_us);
 
 	if (IS_ENABLED(CONFIG_BT_CTLR_LOW_LAT)) {
-		ticks_slot_overhead = MAX(sync->evt.ticks_active_to_start,
-					  sync->evt.ticks_xtal_to_start);
+		ticks_slot_overhead = MAX(sync->ull.ticks_active_to_start,
+					  sync->ull.ticks_prepare_to_start);
 	} else {
 		ticks_slot_overhead = 0;
 	}
@@ -419,7 +419,7 @@ uint32_t ull_adv_sync_start(struct ll_adv_set *adv,
 			   ticks_anchor, 0,
 			   HAL_TICKER_US_TO_TICKS(interval_us),
 			   HAL_TICKER_REMAINDER(interval_us), TICKER_NULL_LAZY,
-			   (sync->evt.ticks_slot + ticks_slot_overhead),
+			   (sync->ull.ticks_slot + ticks_slot_overhead),
 			   ticker_cb, sync,
 			   ull_ticker_status_give, (void *)&ret_cb);
 	ret = ull_ticker_status_take(ret, &ret_cb);
@@ -672,7 +672,11 @@ static uint8_t adv_sync_hdr_set_clear(struct lll_adv_sync *lll_sync,
 	/* Get common pointers from reference to previous tertiary PDU data */
 	ter_com_hdr_prev = (void *)&ter_pdu_prev->adv_ext_ind;
 	ter_hdr = (void *)ter_com_hdr_prev->ext_hdr_adv_data;
-	ter_hdr_prev = *ter_hdr;
+	if (ter_com_hdr_prev->ext_hdr_len) {
+		ter_hdr_prev = *ter_hdr;
+	} else {
+		*(uint8_t *)&ter_hdr_prev = 0U;
+	}
 	ter_dptr_prev = ter_hdr->data;
 
 	/* Set common fields in reference to new tertiary PDU data buffer */
@@ -801,6 +805,11 @@ static uint8_t adv_sync_hdr_set_clear(struct lll_adv_sync *lll_sync,
 	/* Fill AdvData in tertiary PDU */
 	memmove(ter_dptr, ad_data, ad_len);
 
+	/* Early exit if no flags set */
+	if (!ter_com_hdr->ext_hdr_len) {
+		return 0;
+	}
+
 	/* Fill ACAD in tertiary PDU */
 	ter_dptr_prev -= acad_len_prev;
 	ter_dptr -= acad_len_prev;
@@ -896,7 +905,7 @@ static void mfy_sync_offset_get(void *param)
 	uint8_t id;
 
 	lll_sync = adv->lll.sync;
-	sync = (void *)HDR_LLL2EVT(lll_sync);
+	sync = HDR_LLL2ULL(lll_sync);
 	ticker_id = TICKER_ID_ADV_SYNC_BASE + sync_handle_get(sync);
 
 	id = TICKER_NULL;
@@ -907,6 +916,7 @@ static void mfy_sync_offset_get(void *param)
 		uint32_t volatile ret_cb;
 		uint32_t ticks_previous;
 		uint32_t ret;
+		bool success;
 
 		ticks_previous = ticks_current;
 
@@ -923,7 +933,8 @@ static void mfy_sync_offset_get(void *param)
 			}
 		}
 
-		LL_ASSERT(ret_cb == TICKER_STATUS_SUCCESS);
+		success = (ret_cb == TICKER_STATUS_SUCCESS);
+		LL_ASSERT(success);
 
 		LL_ASSERT((ticks_current == ticks_previous) || retry--);
 
@@ -985,7 +996,7 @@ static inline void sync_info_offset_fill(struct pdu_adv_sync_info *si,
 }
 
 static void ticker_cb(uint32_t ticks_at_expire, uint32_t remainder,
-		      uint16_t lazy, void *param)
+		      uint16_t lazy, uint8_t force, void *param)
 {
 	static memq_link_t link;
 	static struct mayfly mfy = {0, 0, &link, NULL, lll_adv_sync_prepare};
@@ -1007,6 +1018,7 @@ static void ticker_cb(uint32_t ticks_at_expire, uint32_t remainder,
 	p.ticks_at_expire = ticks_at_expire;
 	p.remainder = remainder;
 	p.lazy = lazy;
+	p.force = force;
 	p.param = lll;
 	mfy.param = &p;
 
