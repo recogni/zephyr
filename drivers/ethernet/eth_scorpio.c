@@ -90,7 +90,8 @@ static void eth0_iface_init(struct net_if *iface)
 
 static enum ethernet_hw_caps eth_scorpio_scorpio_eth_get_capabilities(const struct device *dev)
 {
-	return 0;
+	// Scorpio built in ethernet has a "limited" feature set
+	return ETHERNET_LINK_1000BASE_T | ETHERNET_DUPLEX_SET | ETHERNET_PROMISC_MODE;
 }
 
 static int eth_scorpio_scorpio_eth_set_config(const struct device *dev,
@@ -107,8 +108,20 @@ static int eth_scorpio_scorpio_eth_get_config(const struct device *dev,
 	return -1;
 }
 
+int eth_scorpio_start(const struct device *dev)
+{
+	return 0;
+}
+
+int eth_scorpio_stop(const struct device *dev)
+{
+	return 0;
+}
+
 static const struct ethernet_api eth_api = {
 	.iface_api.init = eth0_iface_init,
+	.start = eth_scorpio_start,
+	.stop = eth_scorpio_stop,
 	.get_capabilities = eth_scorpio_scorpio_eth_get_capabilities,
 	.set_config = eth_scorpio_scorpio_eth_set_config,
 	.get_config = eth_scorpio_scorpio_eth_get_config,
