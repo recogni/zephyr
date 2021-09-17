@@ -74,7 +74,7 @@ static void schedule_next_timeout(uint32_t current_ticks)
 	}
 
 	/* update task wdt kernel timer */
-	k_timer_user_data_set(&timer, (void *)next_channel_id);
+	k_timer_user_data_set(&timer, (void *)(uintptr_t)next_channel_id);
 	k_timer_start(&timer, K_TIMEOUT_ABS_TICKS(next_timeout), K_FOREVER);
 
 #ifdef CONFIG_TASK_WDT_HW_FALLBACK
