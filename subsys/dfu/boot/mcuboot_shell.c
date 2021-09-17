@@ -180,8 +180,8 @@ static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
 {
 	int i;
 
-	shell_print(shell, "swap type: %s", swap_type_str(mcuboot_swap_type()));
-	shell_print(shell, "confirmed: %d", boot_is_img_confirmed());
+	shell_print(shell, "Lookup tables say swap type: %s", swap_type_str(mcuboot_swap_type()));
+	shell_print(shell, "Primary confirmed: %s", boot_is_img_confirmed() ? "Yes" : "No");
 
 	for (i = 0; i < ARRAY_SIZE(areas); i++) {
 		shell_print(shell, "");

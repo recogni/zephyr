@@ -159,7 +159,11 @@ int boot_request_upgrade(int permanent)
 #ifdef FLASH_AREA_IMAGE_SECONDARY
 	int rc;
 
+#ifdef CONFIG_BOARD_SCORPIO
+	rc = recogni_boot_set_pending(permanent);
+#else
 	rc = boot_set_pending(permanent);
+#endif
 	if (rc) {
 		return -EFAULT;
 	}
@@ -190,7 +194,11 @@ int boot_write_img_confirmed(void)
 {
 	int rc;
 
+#ifdef CONFIG_BOARD_SCORPIO
+	rc = recogni_boot_set_confirmed();
+#else
 	rc = boot_set_confirmed();
+#endif
 	if (rc) {
 		return -EIO;
 	}
