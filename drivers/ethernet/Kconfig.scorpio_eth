@@ -1,0 +1,18 @@
+menuconfig ETH_SCORPIO
+	bool "Recogni Scorpio Built In Ethernet"
+	depends on SOC_RISCV64_SCORPIO 
+	help
+	  Enable Recogni Scorpio Ethernet driver.
+
+if ETH_SCORPIO
+
+config ETH_SCORPIO_PHY_ADDR
+	int "SCORPIO PHY Address"
+	default 0
+	help
+	  SCORPIO PHY Address as used by IEEE 802.3, Section 2 MII compatible PHY
+	  transceivers. If you have a single PHY on board it is safe to leave it
+	  at 0 which is the broadcast address.
+
+
+endif # ETH_SCORPIO
