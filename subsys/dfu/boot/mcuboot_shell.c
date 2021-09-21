@@ -106,6 +106,7 @@ static int cmd_mcuboot_confirm(const struct shell *shell, size_t argc,
 	return err;
 }
 
+#ifndef CONFIG_BOARD_SCORPIO
 static int cmd_mcuboot_request_upgrade(const struct shell *shell, size_t argc,
 				       char **argv)
 {
@@ -128,6 +129,7 @@ static int cmd_mcuboot_request_upgrade(const struct shell *shell, size_t argc,
 
 	return err;
 }
+#endif
 
 static int cmd_mcuboot_info_area(const struct shell *shell,
 				 const struct area_desc *area)
@@ -194,8 +196,10 @@ static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
 SHELL_STATIC_SUBCMD_SET_CREATE(mcuboot_cmds,
 	SHELL_CMD_ARG(confirm, NULL, "confirm", cmd_mcuboot_confirm, 1, 0),
 	SHELL_CMD_ARG(erase, NULL, "erase <area_id>", cmd_mcuboot_erase, 2, 0),
+#ifndef CONFIG_BOARD_SCORPIO
 	SHELL_CMD_ARG(request_upgrade, NULL, "request_upgrade [permanent]",
-		      cmd_mcuboot_request_upgrade, 1, 1),
+    		      cmd_mcuboot_request_upgrade, 1, 1),
+#endif
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 
