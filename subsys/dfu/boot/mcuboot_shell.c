@@ -204,9 +204,12 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
 
 	if (swap_state.copy_done == BOOT_FLAG_SET)
 	{
-		shell_error(shell, "%s area (%u)  Booted/%s:", area->name, area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
+        if (swap_state.image_ok == BOOT_FLAG_SET)
+            shell_error(shell, "%s area (%u)  Booted/Confirmed", area->name, area->id);
+        else
+            shell_error(shell, "%s area (%u)  Booted/Unconfirmed (WARNING: image may be removed on next boot unless confirmed)", area->name, area->id);
 	} else {
-		shell_print(shell, "%s area (%u)  %s:", area->name, area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
+		shell_print(shell, "%s area (%u)  %s", area->name, area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
 	}
 
 	shell_print(shell, "  version: %u.%u.%u+%u",
