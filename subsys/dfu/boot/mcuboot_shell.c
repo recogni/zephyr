@@ -79,7 +79,7 @@ static const char *swap_state_flag_str(uint8_t flag)
 }
 
 static int cmd_mcuboot_erase(const struct shell *shell, size_t argc,
-				 char **argv)
+			     char **argv)
 {
 	unsigned int id = UNFOUND_SLOT;
 	int err;
@@ -146,7 +146,7 @@ static int cmd_mcuboot_erase(const struct shell *shell, size_t argc,
 }
 
 static int cmd_mcuboot_confirm(const struct shell *shell, size_t argc,
-				   char **argv)
+			       char **argv)
 {
 	int err;
 
@@ -163,7 +163,7 @@ static int cmd_mcuboot_confirm(const struct shell *shell, size_t argc,
  * the latest version is always chosen regardless of any flags.
  */
 static int cmd_mcuboot_request_upgrade(const struct shell *shell, size_t argc,
-					   char **argv)
+				       char **argv)
 {
 	int permanent = 0;
 	int err;
@@ -201,7 +201,7 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
 	err = boot_read_swap_state_by_id(area->id, &swap_state);
 	if (err) {
 		shell_error(shell, "failed to read %s area (%u) %s: %d",
-				area->name, area->id, "swap state", err);
+			    area->name, area->id, "swap state", err);
 		return err;
 	}
 
@@ -224,23 +224,23 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
 			(unsigned int) hdr.h.v1.image_size);
 
 	shell_print(shell, "  magic: %s",
-			swap_state_magic_str(swap_state.magic));
+		    swap_state_magic_str(swap_state.magic));
 
 	if (IS_ENABLED(CONFIG_MCUBOOT_TRAILER_SWAP_TYPE)) {
 		shell_print(shell, "  swap type: %s",
-				swap_type_str(swap_state.swap_type));
+			    swap_type_str(swap_state.swap_type));
 	}
 
 	shell_print(shell, "  copy done: %s",
-			swap_state_flag_str(swap_state.copy_done));
+		    swap_state_flag_str(swap_state.copy_done));
 	shell_print(shell, "  image ok: %s",
-			swap_state_flag_str(swap_state.image_ok));
+		    swap_state_flag_str(swap_state.image_ok));
 
 	return 0;
 }
 
 static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
-				char **argv)
+			    char **argv)
 {
 	int i;
 
@@ -257,7 +257,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(mcuboot_cmds,
 	SHELL_CMD_ARG(erase, NULL, "erase <area_id> | [unused] (erases non-boot image)", cmd_mcuboot_erase, 2, 0),
 #ifndef CONFIG_BOARD_SCORPIO
 	SHELL_CMD_ARG(request_upgrade, NULL, "request_upgrade [permanent]",
-				  cmd_mcuboot_request_upgrade, 1, 1),
+		      cmd_mcuboot_request_upgrade, 1, 1),
 #endif
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
