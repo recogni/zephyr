@@ -40,10 +40,10 @@ manifest:
       remote: recogni-http
     - name: mcuboot
       path: modules/mcuboot
-      revision: 99899010c6e56cd777da002ed6d48f99322117b9
+      revision: a54d4212ccd0ce3e0fa90e59cc0c39b15fdc3eb4
       remote: recogni-http
     - name: mcumgr
-      revision: 9b1ed3cc454d27b82d68010bdc23517a42244f50
+      revision: 069193c10db6446ae184ace6f1923ceee02bc2b6
       path: modules/lib/mcumgr
       remote: recogni-http
     - name: tinycbor
