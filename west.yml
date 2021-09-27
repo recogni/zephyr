@@ -96,11 +96,11 @@ manifest:
       path: modules/crypto/mbedtls
       remote: recogni-http
     - name: mcuboot
-      revision: 99899010c6e56cd777da002ed6d48f99322117b9
+      revision: 07e379053a753a098f03d0395eac2ada859d90db
       path: modules/mcuboot
       remote: recogni-http
     - name: mcumgr
-      revision: 9b1ed3cc454d27b82d68010bdc23517a42244f50
+      revision: 5a4448ab667052406511a720852910f4c556b6eb
       path: modules/lib/mcumgr
       remote: recogni-http
     - name: net-tools
