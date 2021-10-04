@@ -20,9 +20,9 @@ struct area_desc {
 };
 
 static const struct area_desc areas[] = {
-	{"primary", FLASH_AREA_IMAGE_PRIMARY},
+	{"Primary", FLASH_AREA_IMAGE_PRIMARY},
 #ifdef FLASH_AREA_IMAGE_SECONDARY
-	{"secondary", FLASH_AREA_IMAGE_SECONDARY},
+	{"Secondary", FLASH_AREA_IMAGE_SECONDARY},
 #endif
 };
 
@@ -44,6 +44,7 @@ static const char *swap_state_magic_str(uint8_t magic)
 	return "unknown";
 }
 
+#ifndef CONFIG_BOARD_SCORPIO
 static const char *swap_type_str(uint8_t type)
 {
 	switch (type) {
@@ -61,6 +62,7 @@ static const char *swap_type_str(uint8_t type)
 
 	return "unknown";
 }
+#endif
 
 static const char *swap_state_flag_str(uint8_t flag)
 {
@@ -187,7 +189,7 @@ static int cmd_mcuboot_request_upgrade(const struct shell *shell, size_t argc,
 #endif
 
 static int cmd_mcuboot_info_area(const struct shell *shell,
-				 const struct area_desc *area)
+				 const struct area_desc *area, int verbose)
 {
 	struct mcuboot_img_header hdr;
 	struct boot_swap_state swap_state;
@@ -204,38 +206,54 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
 			    area->name, area->id, "swap state", err);
 		return err;
 	}
+    if (!verbose)
+    {
+        if (swap_state.magic == BOOT_MAGIC_GOOD)
+        {
+            shell_print(shell, "Slot %u: %u.%u.%u+%u %s %s %s",
+                    area->id,
+                    (unsigned int) hdr.h.v1.sem_ver.major,
+                    (unsigned int) hdr.h.v1.sem_ver.minor,
+                    (unsigned int) hdr.h.v1.sem_ver.revision,
+                    (unsigned int) hdr.h.v1.sem_ver.build_num,
+                    swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed",
+                    swap_state.copy_done == BOOT_FLAG_SET ? "Booted" : "      ",
+                    (swap_state.copy_done == BOOT_FLAG_SET && swap_state.image_ok != BOOT_FLAG_SET) ? "WARNING!: This image may be removed on next reboot unless confirmed!" : "");
+        }
+    } else {
+        if (swap_state.copy_done == BOOT_FLAG_SET)
+        {
+            if (swap_state.image_ok == BOOT_FLAG_SET)
+                shell_error(shell, "Slot %u:  Booted/Confirmed", area->id);
+            else
+                shell_error(shell, "Slot %u:  Booted/Unconfirmed (WARNING: image may be removed on next boot unless confirmed)", area->id);
+        } else {
+            shell_print(shell, "Slot %u:  %s", area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
+        }
 
-	if (swap_state.copy_done == BOOT_FLAG_SET)
-	{
-		if (swap_state.image_ok == BOOT_FLAG_SET)
-			shell_error(shell, "%s area (%u)  Booted/Confirmed", area->name, area->id);
-		else
-			shell_error(shell, "%s area (%u)  Booted/Unconfirmed (WARNING: image may be removed on next boot unless confirmed)", area->name, area->id);
-	} else {
-		shell_print(shell, "%s area (%u)  %s", area->name, area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
-	}
+        shell_print(shell, "  Version: %u.%u.%u+%u",
+                (unsigned int) hdr.h.v1.sem_ver.major,
+                (unsigned int) hdr.h.v1.sem_ver.minor,
+                (unsigned int) hdr.h.v1.sem_ver.revision,
+                (unsigned int) hdr.h.v1.sem_ver.build_num);
+        shell_print(shell, "  Image size: %uK",
+                (unsigned int) hdr.h.v1.image_size/1024);
 
-	shell_print(shell, "  version: %u.%u.%u+%u",
-			(unsigned int) hdr.h.v1.sem_ver.major,
-			(unsigned int) hdr.h.v1.sem_ver.minor,
-			(unsigned int) hdr.h.v1.sem_ver.revision,
-			(unsigned int) hdr.h.v1.sem_ver.build_num);
-	shell_print(shell, "  image size: %u",
-			(unsigned int) hdr.h.v1.image_size);
+        shell_print(shell, "  Magic: %s",
+                swap_state_magic_str(swap_state.magic));
 
-	shell_print(shell, "  magic: %s",
-		    swap_state_magic_str(swap_state.magic));
+    #ifndef CONFIG_BOARD_SCORPIO
+        if (IS_ENABLED(CONFIG_MCUBOOT_TRAILER_SWAP_TYPE)) {
+            shell_print(shell, "  swap type: %s",
+                    swap_type_str(swap_state.swap_type));
+        }
+    #endif
 
-	if (IS_ENABLED(CONFIG_MCUBOOT_TRAILER_SWAP_TYPE)) {
-		shell_print(shell, "  swap type: %s",
-			    swap_type_str(swap_state.swap_type));
-	}
-
-	shell_print(shell, "  copy done: %s",
-		    swap_state_flag_str(swap_state.copy_done));
-	shell_print(shell, "  image ok: %s",
-		    swap_state_flag_str(swap_state.image_ok));
-
+        shell_print(shell, "  Booted: %s",
+                swap_state_flag_str(swap_state.copy_done));
+        shell_print(shell, "  Confirmed: %s",
+                swap_state_flag_str(swap_state.image_ok));
+    }
 	return 0;
 }
 
@@ -243,10 +261,14 @@ static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
 			    char **argv)
 {
 	int i;
+    int verbose = 0;
 
+    if ((argc > 1) && strncmp(argv[1], "-v", 2) == 0) 
+    {
+        verbose = 1;
+    }
 	for (i = 0; i < ARRAY_SIZE(areas); i++) {
-		shell_print(shell, "");
-		cmd_mcuboot_info_area(shell, &areas[i]);
+		cmd_mcuboot_info_area(shell, &areas[i], verbose);
 	}
 
 	return 0;
@@ -255,6 +277,7 @@ static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
 SHELL_STATIC_SUBCMD_SET_CREATE(mcuboot_cmds,
 	SHELL_CMD_ARG(confirm, NULL, "confirm", cmd_mcuboot_confirm, 1, 0),
 	SHELL_CMD_ARG(erase, NULL, "erase <area_id> | [unused] (erases non-boot image)", cmd_mcuboot_erase, 2, 0),
+	SHELL_CMD_ARG(info, NULL, "info <-v> verbose", cmd_mcuboot_info, 1, 1),
 #ifndef CONFIG_BOARD_SCORPIO
 	SHELL_CMD_ARG(request_upgrade, NULL, "request_upgrade [permanent]",
 		      cmd_mcuboot_request_upgrade, 1, 1),
@@ -262,5 +285,4 @@ SHELL_STATIC_SUBCMD_SET_CREATE(mcuboot_cmds,
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 
-SHELL_CMD_REGISTER(mcuboot, &mcuboot_cmds, "MCUboot commands",
-		   cmd_mcuboot_info);
+SHELL_CMD_REGISTER(mcuboot, &mcuboot_cmds, "MCUboot commands", NULL);
