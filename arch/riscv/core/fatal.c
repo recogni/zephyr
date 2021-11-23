@@ -114,7 +114,7 @@ void _Fault(z_arch_esf_t *esf)
  	 *  mtval in 1.9-priv replaces mbadaddr in the older specs.
 	 *  See: https://www.five-embeddev.com/riscv-isa-manual/latest/machine.html
 	 */
-#ifdef CONFIG_SCORPIO_MIPIRX
+#if defined(CONFIG_SCORPIO_MIPIRX) && !defined(__clang__)
 	__asm__ volatile("csrr %0, mbadaddr" : "=r" (mtval));
 #else
 	__asm__ volatile("csrr %0, mtval" : "=r" (mtval));
