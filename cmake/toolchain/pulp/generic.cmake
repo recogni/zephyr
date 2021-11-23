@@ -11,7 +11,7 @@ set(LLVM_TOOLCHAIN_PATH ${CLANG_ROOT_DIR} CACHE PATH "clang install directory")
 
 set(COMPILER clang)
 set(LINKER lld)
-set(BINTOOLS llvm)
+set(BINTOOLS pulp)
 
 if("${ARCH}" STREQUAL "riscv")
   set(triple riscv32-unknown-elf)
