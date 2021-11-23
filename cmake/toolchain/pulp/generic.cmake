@@ -14,6 +14,7 @@ set(LINKER lld)
 set(BINTOOLS llvm)
 
 if("${ARCH}" STREQUAL "riscv")
+  set(triple riscv32-unknown-elf)
 else()
   message("Unsupported architecture ${ARCH}")
 endif()
