@@ -13,7 +13,11 @@ FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(small);
 struct fs_mount_t testfs_small_mnt = {
 	.type = FS_LITTLEFS,
 	.fs_data = &small,
+#ifdef CONFIG_SCORPIO_FLASH
+	.storage_dev = (void *)FLASH_AREA_ID(image_scratch),
+#else
 	.storage_dev = (void *)FLASH_AREA_ID(small),
+#endif
 	.mnt_point = TESTFS_MNT_POINT_SMALL,
 };
 

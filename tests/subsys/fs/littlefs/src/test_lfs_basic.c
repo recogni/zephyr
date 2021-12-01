@@ -60,19 +60,31 @@ static int clean_statvfs(const struct fs_mount_t *mp)
 	TC_PRINT("%s: bsize %lu ; frsize %lu ; blocks %lu ; bfree %lu\n",
 		 mp->mnt_point,
 		 stat.f_bsize, stat.f_frsize, stat.f_blocks, stat.f_bfree);
-	zassert_equal(stat.f_bsize, 16,
-		      "bsize fail");
 #ifdef CONFIG_SCORPIO_FLASH
-    /* 
-     * Scorpio emulates flash using 512 byte blocks vs 4k blocks. 
-     * 512 blocksize * 128 blocks == 64k
-     * Silly that this is hardcoded.
+
+    /*
+     * Scorpio emulates flash using 512 byte blocks.
+     * Verify we have the same setting as Scorpio SCPU
      */
+	zassert_equal(CONFIG_FS_LITTLEFS_READ_SIZE, 512, "Bad CONFIG value");
+
+    /*
+     * Verify we are actually using this setting
+     */
+	zassert_equal(stat.f_bsize, CONFIG_FS_LITTLEFS_READ_SIZE,
+		      "bsize fail");
+
 	zassert_equal(stat.f_frsize, 512,
 		      "frsize fail");
-	zassert_equal(stat.f_blocks, 128,
+    /*
+     * dts defines partition 'image-sratch' as 2 MB (0x200000).
+     * Num_blocks should be the image size/block size.
+     */
+	zassert_equal(stat.f_blocks, 0x200000/CONFIG_FS_LITTLEFS_READ_SIZE,
 		      "blocks fail");
 #else
+	zassert_equal(stat.f_bsize, 16,
+		      "bsize fail");
     /* 4k blocksize * 16 blocks == 64k */
 	zassert_equal(stat.f_frsize, 4096,
 		      "frsize fail");

@@ -1,0 +1,4 @@
+#
+# To build for scorpio, run this from scorpio-fw:
+#
+west build -bscorpio zephyr/tests/subsys/fs/littlefs -d build/lfs -- -DBOARD_ROOT=$PWD/zephyr-overlay -DDTS_ROOT=$PWD/zephyr-overlay -DSOC_ROOT=$PWD/zephyr-overlay -DZEPHYR_EXTRA_MODULES=$PWD/zephyr-overlay

@@ -7,3 +7,9 @@ source "Kconfig.zephyr"
 
 config APP_TEST_CUSTOM
 	bool "Select to test additional custom filesystem configurations"
+
+config SCORPIO_SCPU
+    bool "Scorpio SCPU firmware"
+    default y
+    help
+        Scorpio SCPU app
