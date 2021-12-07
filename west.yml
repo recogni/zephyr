@@ -40,7 +40,7 @@ manifest:
       remote: recogni-http
     - name: mcuboot
       path: modules/mcuboot
-      revision: 07e379053a753a098f03d0395eac2ada859d90db
+      revision: 37c2abc2e74d5ba0e558823f428bcff1da0189c0
       remote: recogni-http
     - name: mcumgr
       revision: 5a4448ab667052406511a720852910f4c556b6eb
