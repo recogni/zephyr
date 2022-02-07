@@ -28,7 +28,11 @@ SECTION_FUNC(exception.other, __soc_handle_irq)
 	/* Clear exception number from CSR mip register */
 	li t1, 1
 	sll t0, t1, a0
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	csrrc t1, sip, t0
+#else
 	csrrc t1, mip, t0
+#endif
 
 	/* Return */
 	jalr x0, ra
@@ -47,7 +51,11 @@ WTEXT(__soc_is_irq)
  */
 SECTION_FUNC(exception.other, __soc_is_irq)
 	/* Read mcause and check if interrupt bit is set */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	csrr t0, scause
+#else
 	csrr t0, mcause
+#endif
 	li t1, SOC_MCAUSE_IRQ_MASK
 	and t0, t0, t1
 

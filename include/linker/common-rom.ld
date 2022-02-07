@@ -156,7 +156,7 @@
 		__emul_list_start = .;
 		KEEP(*(SORT_BY_NAME(".emulators")));
 		__emul_list_end = .;
-	} GROUP_LINK_IN(ROMABLE_REGION)
+	} GROUP_ROM_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
 #endif /* CONFIG_EMUL */
 
 #if defined(CONFIG_DNS_SD)
@@ -169,7 +169,7 @@
 		__irq_alloc_start = .;
 		KEEP(*(SORT_BY_NAME("._irq_alloc*")));
 		__irq_alloc_end = .;
-	} GROUP_LINK_IN(ROMABLE_REGION)
+	} GROUP_ROM_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
 #endif /* CONFIG_PCIE */
 
 	SECTION_DATA_PROLOGUE(log_strings_sections,,)

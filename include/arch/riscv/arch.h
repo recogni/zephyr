@@ -212,8 +212,11 @@
  */
 
 #define MSTATUS_IEN     (1UL << 3)
+#define SSTATUS_IEN     (1UL << 1)
+#define MSTATUS_MPP_S   (1UL << 11)
 #define MSTATUS_MPP_M   (3UL << 11)
 #define MSTATUS_MPIE_EN (1UL << 7)
+#define MSTATUS_SPIE_EN (1UL << 5)
 #define MSTATUS_FS_INIT (1UL << 13)
 #define MSTATUS_FS_MASK ((1UL << 13) | (1UL << 14))
 
@@ -226,7 +229,11 @@
  * - Enable interrupts when exiting from exception into a new thread
  *   by setting MPIE now, so it will be copied into IE on mret.
  */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+#define MSTATUS_DEF_RESTORE (MSTATUS_SPP | MSTATUS_SPIE_EN)
+#else
 #define MSTATUS_DEF_RESTORE (MSTATUS_MPP_M | MSTATUS_MPIE_EN)
+#endif
 
 #ifndef _ASMLANGUAGE
 #include <sys/util.h>
@@ -314,12 +321,21 @@ static ALWAYS_INLINE unsigned int arch_irq_lock(void)
 	unsigned int key;
 	ulong_t mstatus;
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	__asm__ volatile ("csrrc %0, sstatus, %1"
+			  : "=r" (mstatus)
+			  : "r" (SSTATUS_IEN)
+			  : "memory");
+
+	key = (mstatus & SSTATUS_IEN);
+#else
 	__asm__ volatile ("csrrc %0, mstatus, %1"
 			  : "=r" (mstatus)
 			  : "r" (MSTATUS_IEN)
 			  : "memory");
 
 	key = (mstatus & MSTATUS_IEN);
+#endif
 	return key;
 }
 
@@ -331,10 +347,17 @@ static ALWAYS_INLINE void arch_irq_unlock(unsigned int key)
 {
 	ulong_t mstatus;
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	__asm__ volatile ("csrrs %0, sstatus, %1"
+			  : "=r" (mstatus)
+			  : "r" (key & SSTATUS_IEN)
+			  : "memory");
+#else
 	__asm__ volatile ("csrrs %0, mstatus, %1"
 			  : "=r" (mstatus)
 			  : "r" (key & MSTATUS_IEN)
 			  : "memory");
+#endif
 }
 
 static ALWAYS_INLINE bool arch_irq_unlocked(unsigned int key)
@@ -346,7 +369,11 @@ static ALWAYS_INLINE bool arch_irq_unlocked(unsigned int key)
 	 * that something elseswhere might try to set a bit?  Do it
 	 * the safe way for now.
 	 */
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	return (key & SSTATUS_IEN) == SSTATUS_IEN;
+#else
 	return (key & MSTATUS_IEN) == MSTATUS_IEN;
+#endif
 }
 
 static ALWAYS_INLINE void arch_nop(void)

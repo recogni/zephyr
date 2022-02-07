@@ -171,6 +171,11 @@ static void plic_irq_handler(const void *arg)
 	 * PLIC controller that the IRQ has been handled.
 	 */
 	regs->claim_complete = save_irq;
+
+#if defined(CONFIG_RISCV_SUPERVISOR)
+       arch_syscall_invoke2(MIP_SEIP, MIP_MEIP, SET_MIP_MIE_SYSCALL_ID);
+#endif
+
 }
 
 /**
@@ -204,14 +209,23 @@ static int plic_init(const struct device *dev)
 	regs->threshold_prio = 0U;
 
 	/* Setup IRQ handler for PLIC driver */
-	IRQ_CONNECT(RISCV_MACHINE_EXT_IRQ,
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	const int32_t irq = RISCV_SUPERVISOR_EXT_IRQ;
+#else
+	const int32_t irq = RISCV_MACHINE_EXT_IRQ;
+#endif
+	IRQ_CONNECT(irq,
 		    0,
 		    plic_irq_handler,
 		    NULL,
 		    0);
 
 	/* Enable IRQ for PLIC driver */
-	irq_enable(RISCV_MACHINE_EXT_IRQ);
+	irq_enable(irq);
+
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	arch_syscall_invoke2(MIP_SEIP, MIP_MEIP, SET_MIP_MIE_SYSCALL_ID);
+#endif
 
 	return 0;
 }
