@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(tftp_client, CONFIG_TFTP_LOG_LEVEL);
 
 #include <stddef.h>
 #include <net/tftp.h>
+#include <assert.h>
 #include "tftp_client.h"
 
 #define ADDRLEN(sock) \
@@ -89,12 +90,53 @@ static inline int send_ack(int sock, struct tftphdr_ack *ackhdr)
 	return 0;
 }
 
+/*
+ * Used in write/push direction, expecting only ACKs no DATA.
+ * Return block num being acked.
+ */
+static int read_ack(int sock)
+{
+	char ack_buf[8];
+	uint16_t opcode, block_num;
+	int len;
+
+	/* Poll for the response */
+	struct pollfd fds = {
+		.fd     = sock,
+		.events = ZSOCK_POLLIN,
+	};
+
+	if (poll(&fds, 1, CONFIG_TFTPC_REQUEST_TIMEOUT) <= 0) {
+		LOG_ERR("%s: Poll failed \n", __FUNCTION__);
+		return -1;
+	}
+
+        len = recv(sock, ack_buf, sizeof(ack_buf), 0);
+
+        /* Expecting ACK which is TFTP_HEADER_SIZE */
+        if (len <  TFTP_HEADER_SIZE)
+            LOG_ERR("%s: Could only read %d bytes\n", __FUNCTION__, len);
+
+        if (len >  TFTP_HEADER_SIZE)
+            LOG_ERR("%s: Unexpected ack len, %d bytes\n", __FUNCTION__, len);
+
+        opcode =  sys_get_be16(ack_buf);
+        block_num = sys_get_be16(ack_buf + 2);
+
+        if (opcode != ACK_OPCODE)
+            LOG_ERR("%s: Unexpected op code when looking for ack: %d\n", __FUNCTION__, opcode);
+
+        return block_num;
+}
+
 static int tftp_send_request(int sock, struct sockaddr *server_addr,
 		int request, const char *remote_file, const char *mode)
 {
 	int tx_count = 0;
 	size_t req_size;
 	int ret;
+
+	assert(request == READ_REQUEST || request == WRITE_REQUEST);
 
 	/* Create TFTP Request. */
 	req_size = make_request(tftpc_buffer, request, remote_file, mode);
@@ -132,9 +174,30 @@ static int tftp_send_request(int sock, struct sockaddr *server_addr,
 		ret = recvfrom(sock, tftpc_buffer, TFTPC_MAX_BUF_SIZE, 0,
 				&from_addr, &from_addr_len);
 		if (ret < TFTP_HEADER_SIZE) {
+			LOG_ERR("%s: Rx'ed unexpected short response to %d: len %d, resend.\n", __FUNCTION__, request, ret);
 			req_size = make_request(tftpc_buffer, request,
 						remote_file, mode);
 			continue;
+		}
+
+		uint16_t opcode = sys_get_be16(tftpc_buffer);
+		uint16_t blocknum = sys_get_be16(tftpc_buffer + 2);
+
+		if (request == READ_REQUEST)
+		{
+			/* Server responds with first data buffer on a READ */
+			if ((opcode != DATA_OPCODE) || (blocknum != 1))
+			{
+				LOG_ERR("%s: READ: Invalid resp: length %d, opcode %d, block %d \n", __FUNCTION__, ret, opcode, blocknum);
+			}
+		}
+		else
+		{
+			/* Server responds with ACK on a WRITE */
+			if ((ret != TFTP_HEADER_SIZE) || (opcode != ACK_OPCODE) || (blocknum != 0))
+			{
+				LOG_ERR("%s: WRITE: Unexpected request response: length %d, opcode %d, block %d \n", __FUNCTION__, ret, opcode, blocknum);
+			}
 		}
 
 		/* Limit communication to the specific address:port */
@@ -248,6 +311,84 @@ int tftp_get(struct sockaddr *server_addr, struct tftpc *client,
 	}
 
 req_abort:
+	k_mutex_unlock(&tftpc_lock);
+	close(sock);
+	return ret;
+}
+
+int tftp_put(struct sockaddr *server_addr, struct tftpc *client,
+	     const char *remote_file, const char *mode)
+{
+	int ret, acked_block, outgoing_cnt, sock, retry_count;
+	int data_size, outgoing_idx;
+	uint16_t block_no = 1;
+
+	sock = socket(server_addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0) {
+		LOG_ERR("Failed to create UDP socket (IPv4): %d", errno);
+		return -errno;
+	}
+
+	/* Obtain Global Lock before accessing critical resources. */
+	k_mutex_lock(&tftpc_lock, K_FOREVER);
+
+	/* Send out the request (eg filename) to the TFTP Server. */
+	if ((ret = tftp_send_request(sock, server_addr, WRITE_REQUEST, remote_file, mode)) < 0)
+	{
+		LOG_ERR("%s: Unable to make request to server %d\n", __FUNCTION__, ret);
+		goto abort;
+	}
+
+	outgoing_idx = 0;
+	outgoing_cnt = client->user_buf_size;
+	retry_count = 0;
+
+	while ((outgoing_cnt > 0) && (retry_count < TFTP_REQ_RETX))
+	{
+		/* Process server response. */
+		retry_count = 0;
+
+		sys_put_be16(DATA_OPCODE, tftpc_buffer);
+		sys_put_be16(block_no, tftpc_buffer + 2);
+
+		data_size = MIN(TFTP_BLOCK_SIZE, outgoing_cnt);
+
+		/* Perform the actual copy and update the index. */
+		memcpy(tftpc_buffer + TFTP_HEADER_SIZE, client->user_buf + outgoing_idx, data_size);
+
+		do {
+			ret = send(sock, tftpc_buffer, data_size + TFTP_HEADER_SIZE, 0);
+			if (ret < 0) {
+				LOG_ERR("%s: sendto fails, returned %d\n", __FUNCTION__, ret);
+				return ret;
+			}
+
+			assert(ret = data_size + TFTP_HEADER_SIZE);
+
+			acked_block = read_ack(sock);
+
+			/* Got the ack we are looking for? Then prep for next & done with retries. */
+			if (acked_block == block_no)
+			{
+				outgoing_cnt -= data_size;
+				outgoing_idx += data_size;
+				block_no++;
+				break;   /* send next block */
+			}
+
+			/* Mismatch block, Retry */
+			LOG_ERR("read_ack returns Bad block %d, block_no %d,=> retry\n", acked_block, block_no);
+
+		} while (++retry_count < TFTP_REQ_RETX);
+	}
+
+	if (retry_count >= TFTP_REQ_RETX)
+	{
+		LOG_ERR("%s: Max retries! Abort!\n", __FUNCTION__);
+		ret = -1;
+	}
+
+abort:
 	k_mutex_unlock(&tftpc_lock);
 	close(sock);
 	return ret;
