@@ -50,9 +50,9 @@ void _PrepC(void)
 	CODE_UNREACHABLE;
 }
 
-void _SlaveCoreMain(const int hart_id)
+void _WorkerCoreMain(const int hart_id)
 {
-	extern void slave_main(int slave_id);
+	extern void worker_main(int hart_id);
 
-	slave_main(hart_id);
+	worker_main(hart_id);
 }

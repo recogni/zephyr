@@ -42,7 +42,7 @@ SECTION_FUNC(TEXT, __initialize)
 	beqz a0, boot_master_core
 
 #ifdef CONFIG_SCORPIO_SMP
-	call _SlaveCoreMain
+	call _WorkerCoreMain
 #endif
 loop_slave_core:
 	wfi
