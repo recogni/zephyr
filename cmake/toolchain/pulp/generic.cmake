@@ -25,4 +25,6 @@ set(CMAKE_CXX_COMPILER_TARGET ${triple})
 
 set(TOOLCHAIN_HAS_NEWLIB OFF CACHE BOOL "True if toolchain supports newlib")
 
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_LIST_DIR}/override.cmake")
+
 message(STATUS "Found toolchain: host (clang/ld)")
