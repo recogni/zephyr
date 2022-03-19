@@ -907,9 +907,11 @@ skip_callee_saved_reg:
 	 * of z_swap to _k_neg_eagain for the thread.
 	 */
 	RV_OP_STOREREG sp, _thread_offset_to_sp(t1)
+#if !defined(CONFIG_RISCV_SUPERVISOR)
 	la t2, _k_neg_eagain
 	lw t3, 0x00(t2)
 	sw t3, _thread_offset_to_swap_return_value(t1)
+#endif /* CONFIG_RISCV_SUPERVISOR */
 
 	/* Get next thread to schedule. */
 	RV_OP_LOADREG t1, _kernel_offset_to_ready_q_cache(t0)
