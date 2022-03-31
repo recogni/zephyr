@@ -559,6 +559,151 @@ static lfs_size_t get_block_size(const struct flash_area *fa)
 	return ctx.max_size;
 }
 
+int littlefs_format(struct fs_mount_t *mountp)
+{
+	int ret;
+	struct fs_littlefs *fs = mountp->fs_data;
+	unsigned int area_id = (uintptr_t)mountp->storage_dev;
+	const struct device *dev;
+
+	LOG_INF("LittleFS version %u.%u, disk version %u.%u",
+		LFS_VERSION_MAJOR, LFS_VERSION_MINOR,
+		LFS_DISK_VERSION_MAJOR, LFS_DISK_VERSION_MINOR);
+
+	if (fs->area) {
+		return -EBUSY;
+	}
+
+	/* Create and take mutex. */
+	k_mutex_init(&fs->mutex);
+	fs_lock(fs);
+
+	/* Open flash area */
+	ret = flash_area_open(area_id, &fs->area);
+	if ((ret < 0) || (fs->area == NULL)) {
+		LOG_ERR("can't open flash area %d", area_id);
+		ret = -ENODEV;
+		goto out;
+	}
+	LOG_DBG("FS area %u at 0x%x for %u bytes",
+		area_id, (uint32_t)fs->area->fa_off,
+		(uint32_t)fs->area->fa_size);
+
+	dev = flash_area_get_device(fs->area);
+	if (dev == NULL) {
+		LOG_ERR("can't get flash device: %s", log_strdup(fs->area->fa_dev_name));
+		ret = -ENODEV;
+		goto out;
+	}
+
+	BUILD_ASSERT(CONFIG_FS_LITTLEFS_READ_SIZE > 0);
+	BUILD_ASSERT(CONFIG_FS_LITTLEFS_PROG_SIZE > 0);
+	BUILD_ASSERT(CONFIG_FS_LITTLEFS_CACHE_SIZE > 0);
+	BUILD_ASSERT(CONFIG_FS_LITTLEFS_LOOKAHEAD_SIZE > 0);
+	BUILD_ASSERT((CONFIG_FS_LITTLEFS_LOOKAHEAD_SIZE % 8) == 0);
+	BUILD_ASSERT((CONFIG_FS_LITTLEFS_CACHE_SIZE
+		      % CONFIG_FS_LITTLEFS_READ_SIZE) == 0);
+	BUILD_ASSERT((CONFIG_FS_LITTLEFS_CACHE_SIZE
+		      % CONFIG_FS_LITTLEFS_PROG_SIZE) == 0);
+
+	struct lfs_config *lcp = &fs->cfg;
+
+	lfs_size_t read_size = lcp->read_size;
+
+	if (read_size == 0) {
+		read_size = CONFIG_FS_LITTLEFS_READ_SIZE;
+	}
+
+	lfs_size_t prog_size = lcp->prog_size;
+
+	if (prog_size == 0) {
+		prog_size = CONFIG_FS_LITTLEFS_PROG_SIZE;
+	}
+
+	/* Yes, you can override block size. */
+	lfs_size_t block_size = lcp->block_size;
+
+	if (block_size == 0) {
+		block_size = get_block_size(fs->area);
+	}
+	if (block_size == 0) {
+		__ASSERT_NO_MSG(block_size != 0);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	int32_t block_cycles = lcp->block_cycles;
+
+	if (block_cycles == 0) {
+		block_cycles = CONFIG_FS_LITTLEFS_BLOCK_CYCLES;
+	}
+	if (block_cycles <= 0) {
+		/* Disable leveling (littlefs v2.1+ semantics) */
+		block_cycles = -1;
+	}
+
+	lfs_size_t cache_size = lcp->cache_size;
+
+	if (cache_size == 0) {
+		cache_size = CONFIG_FS_LITTLEFS_CACHE_SIZE;
+	}
+
+	lfs_size_t lookahead_size = lcp->lookahead_size;
+
+	if (lookahead_size == 0) {
+		lookahead_size = CONFIG_FS_LITTLEFS_LOOKAHEAD_SIZE;
+	}
+
+
+	/* No, you don't get to override this. */
+	lfs_size_t block_count = fs->area->fa_size / block_size;
+
+	LOG_INF("FS at %s:0x%x is %u 0x%x-byte blocks with %u cycle",
+		log_strdup(dev->name), (uint32_t)fs->area->fa_off,
+		block_count, block_size, block_cycles);
+	LOG_INF("sizes: rd %u ; pr %u ; ca %u ; la %u",
+		read_size, prog_size, cache_size, lookahead_size);
+
+	__ASSERT_NO_MSG(prog_size != 0);
+	__ASSERT_NO_MSG(read_size != 0);
+	__ASSERT_NO_MSG(cache_size != 0);
+	__ASSERT_NO_MSG(block_size != 0);
+
+	__ASSERT((fs->area->fa_size % block_size) == 0,
+		 "partition size must be multiple of block size");
+	__ASSERT((block_size % prog_size) == 0,
+		 "erase size must be multiple of write size");
+	__ASSERT((block_size % cache_size) == 0,
+		 "cache size incompatible with block size");
+
+	/* Set the validated/defaulted values. */
+	lcp->context = (void *)fs->area;
+	lcp->read = lfs_api_read;
+	lcp->prog = lfs_api_prog;
+	lcp->erase = lfs_api_erase;
+	lcp->sync = lfs_api_sync;
+	lcp->read_size = read_size;
+	lcp->prog_size = prog_size;
+	lcp->block_size = block_size;
+	lcp->block_count = block_count;
+	lcp->block_cycles = block_cycles;
+	lcp->cache_size = cache_size;
+	lcp->lookahead_size = lookahead_size;
+
+	ret = lfs_format(&fs->lfs, &fs->cfg);
+	if (ret < 0) {
+		printk("format failed (LFS %d)\n", ret);
+		ret = lfs_to_errno(ret);
+		goto out;
+	}
+
+out:
+	flash_area_close(fs->area);
+	fs->area = NULL;
+	fs_unlock(fs);
+	return ret;
+}
+
 static int littlefs_mount(struct fs_mount_t *mountp)
 {
 	int ret;
