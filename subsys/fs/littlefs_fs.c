@@ -690,6 +690,16 @@ static int littlefs_mount(struct fs_mount_t *mountp)
 	lcp->cache_size = cache_size;
 	lcp->lookahead_size = lookahead_size;
 
+	/* Do format if requested */
+	if (mountp->flags & FS_MOUNT_FLAG_FORCE_FORMAT) {
+		ret = lfs_format(&fs->lfs, &fs->cfg);
+		if (ret < 0) {
+			LOG_ERR("format failed (LFS %d)", ret);
+			ret = lfs_to_errno(ret);
+			goto out;
+		}
+	}
+
 	/* Mount it, formatting if needed. */
 	ret = lfs_mount(&fs->lfs, &fs->cfg);
 	if (ret < 0 &&

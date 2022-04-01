@@ -67,6 +67,9 @@ enum {
  */
 #define FS_MOUNT_FLAG_AUTOMOUNT BIT(2)
 
+/** Force a format before attempting mount */
+#define FS_MOUNT_FLAG_FORCE_FORMAT BIT(7)
+
 
 /**
  * @brief File system mount info structure
