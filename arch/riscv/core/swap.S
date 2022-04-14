@@ -12,6 +12,9 @@
 /* exports */
 GTEXT(arch_swap)
 GTEXT(z_thread_entry_wrapper)
+#if defined(CONFIG_RISCV_SUPERVISOR)
+GTEXT(_k_neg_eagain)
+#endif /* CONFIG_RISCV_SUPERVISOR */
 
 /* Use ABI name of registers for the sake of simplicity */
 
@@ -23,10 +26,19 @@ GTEXT(z_thread_entry_wrapper)
  */
 SECTION_FUNC(exception.other, arch_swap)
 
-	/* Make a system call to perform context switch */
 #if defined(CONFIG_RISCV_SUPERVISOR)
+	/* Get pointer to _kernel.current */
+	la t0, _kernel
+	RV_OP_LOADREG t1, _kernel_offset_to_current(t0)
+
+	/* Set the default return value of arch_swap to -EAGAIN for the thread */
+	la t2, _k_neg_eagain
+	lw t2, 0x00(t2)
+	sw t2, _thread_offset_to_swap_return_value(t1)
+
+	/* Make a system call to perform context switch */
 	li a7, NO_SYSCALL_ID
-#endif
+#endif /* CONFIG_RISCV_SUPERVISOR */
 	ecall
 
 	/*
@@ -38,10 +50,12 @@ SECTION_FUNC(exception.other, arch_swap)
 	 * _thread_offset_to_swap_return_value). Normally, it should be -EAGAIN,
 	 * unless someone has previously called arch_thread_return_value_set(..).
 	 */
+#if !defined(CONFIG_RISCV_SUPERVISOR)
 	la t0, _kernel
 
 	/* Get pointer to _kernel.current */
 	RV_OP_LOADREG t1, _kernel_offset_to_current(t0)
+#endif /* CONFIG_RISCV_SUPERVISOR */
 
 	/* Load return value of arch_swap function in temp register t2 */
 	lw t2, _thread_offset_to_swap_return_value(t1)
