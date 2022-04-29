@@ -49,10 +49,3 @@ void _PrepC(void)
 	z_cstart();
 	CODE_UNREACHABLE;
 }
-
-void _WorkerCoreMain(const int hart_id)
-{
-	extern void worker_main(int hart_id);
-
-	worker_main(hart_id);
-}

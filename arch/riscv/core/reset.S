@@ -16,6 +16,7 @@ GTEXT(__reset)
 
 /* imports */
 GTEXT(_PrepC)
+GTEXT(worker_main)
 
 #if CONFIG_INCLUDE_RESET_VECTOR
 SECTION_FUNC(reset, __reset)
@@ -42,7 +43,7 @@ SECTION_FUNC(TEXT, __initialize)
 	beqz a0, boot_master_core
 
 #ifdef CONFIG_SCORPIO_SMP
-	call _WorkerCoreMain
+	call worker_main
 #endif
 loop_slave_core:
 	wfi
