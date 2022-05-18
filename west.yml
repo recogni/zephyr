@@ -215,6 +215,9 @@ manifest:
       revision: c74be3890c9d975976fde1b1a3b2f5742bec34c0
       groups:
         - tee
+    - name: erpc
+      revision: d4cc6349dc33ff511fd27f5a49c2d95ae26cd8a
+      path: modules/erpc
 
   self:
     path: zephyr

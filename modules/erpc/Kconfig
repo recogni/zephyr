@@ -1,0 +1,10 @@
+# Copyright (c) 2020 Linumiz
+# SPDX-License-Identifier: Apache-2.0
+#WTF_XYZ
+config ZEPHYR_ERPC_MODULE
+	bool
+
+config ERPC
+	bool "Enable rpc library"
+	help
+	  This option enables eprc library.
