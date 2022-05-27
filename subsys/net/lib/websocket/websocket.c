@@ -22,7 +22,12 @@ LOG_MODULE_REGISTER(net_websocket, CONFIG_NET_WEBSOCKET_LOG_LEVEL);
 #include <sys/fdtable.h>
 #include <net/net_core.h>
 #include <net/net_ip.h>
+#if defined(CONFIG_POSIX_API)
+#include <posix/unistd.h>
+#include <posix/sys/socket.h>
+#else
 #include <net/socket.h>
+#endif
 #include <net/http_client.h>
 #include <net/websocket.h>
 
