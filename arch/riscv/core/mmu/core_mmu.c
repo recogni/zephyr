@@ -244,17 +244,17 @@ __attribute__((optimize("no-omit-frame-pointer"))) void z_riscv_mmu_init(void)
 	/* Set up translation and permissions for Zephyr regions */
 	set_mapping(pt_l2,
 		    Z_MEM_VIRT_ADDR(MMU_PAGE_ALIGN_DOWN(__rodata_region_start)),
-		    MMU_PAGE_ALIGN_DOWN(__rodata_region_start),
+		    MMU_PAGE_ALIGN_DOWN(__rodata_region_start) ^ mmu_config.data_section_pa_mask,
 		    MMU_PAGE_ALIGN_UP(__rodata_region_end) - MMU_PAGE_ALIGN_DOWN(__rodata_region_start),
 		    PTE_V | PTE_R | PTE_A | PTE_D);
 	set_mapping(pt_l2,
 		    Z_MEM_VIRT_ADDR(MMU_PAGE_ALIGN_DOWN(_image_ram_start)),
-		    MMU_PAGE_ALIGN_DOWN(_image_ram_start),
+		    MMU_PAGE_ALIGN_DOWN(_image_ram_start) ^ mmu_config.data_section_pa_mask,
 		    MMU_PAGE_ALIGN_UP(_image_ram_end) - MMU_PAGE_ALIGN_DOWN(_image_ram_start),
 		    PTE_V | PTE_R | PTE_W | PTE_A | PTE_D);
 	set_mapping(pt_l2,
 		    Z_MEM_VIRT_ADDR(MMU_PAGE_ALIGN_DOWN(__text_region_start)),
-		    MMU_PAGE_ALIGN_DOWN(__text_region_start),
+		    MMU_PAGE_ALIGN_DOWN(__text_region_start) ^ mmu_config.text_section_pa_mask,
 		    MMU_PAGE_ALIGN_UP(__text_region_end) - MMU_PAGE_ALIGN_DOWN(__text_region_start),
 		    PTE_V | PTE_R | PTE_X | PTE_A | PTE_D);
 
