@@ -24,6 +24,10 @@ struct riscv_mmu_region {
 
 /* MMU configuration data structure */
 struct riscv_mmu_config {
+	/* Optional physical address mask for linked text sections */
+	uintptr_t text_section_pa_mask;
+	/* Optional physical address mask for linked data sections */
+	uintptr_t data_section_pa_mask;
 	/* Number of regions */
 	unsigned int num_regions;
 	/* Regions */
