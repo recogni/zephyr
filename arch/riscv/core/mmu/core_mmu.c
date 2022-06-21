@@ -207,7 +207,7 @@ static uint32_t convert_flags(uint32_t flags)
  * The function wraps the mmu setup. It includes page table initialization and
  * mmu configure.
  */
-__attribute__((optimize("no-omit-frame-pointer"))) void z_riscv_mmu_init(void)
+__attribute__((optimize("O0,no-omit-frame-pointer"))) void z_riscv_mmu_init(void)
 {
 	memset((void *)pt_l2, 0, sizeof(pt_l2));
 	memset((void *)pt_l1, 0, sizeof(pt_l1));
