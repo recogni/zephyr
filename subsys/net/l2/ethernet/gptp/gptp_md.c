@@ -147,7 +147,7 @@ static int gptp_set_md_sync_receive(int port,
                 if (0) {
                         struct tm tm, *tm_p = &tm;
                         gmtime_r(&tp.tv_sec, tm_p);
-                        NET_WARN("seq %d sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC",
+                        GPTP_WARN("seq %d sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC",
 				ntohs(fup_hdr->sequence_id),
 			    sync_rcv->precise_orig_ts._sec.low, sync_rcv->precise_orig_ts.nanosecond,
                             tm_p->tm_year + 1900,
@@ -192,7 +192,7 @@ static void gptp_md_pdelay_reset(int port)
 	struct gptp_pdelay_req_state *state;
 	struct gptp_port_ds *port_ds;
 
-	NET_WARN("Reset Pdelay requests");
+	//GPTP_WARN("Reset Pdelay requests");
 
 	state = &GPTP_PORT_STATE(port)->pdelay_req;
 	port_ds = GPTP_PORT_DS(port);
@@ -218,7 +218,7 @@ static void gptp_md_pdelay_check_multiple_resp(int port)
 	if ((state->rcvd_pdelay_resp > 1) ||
 			(state->rcvd_pdelay_follow_up > 1)) {
 		port_ds->as_capable = false;
-		NET_WARN("Too many responses (%d / %d)",
+		GPTP_WARN("Too many PDelay responses (%d / %d)",
 			 state->rcvd_pdelay_resp,
 			 state->rcvd_pdelay_follow_up);
 		state->multiple_resp_count++;
@@ -346,7 +346,7 @@ static void gptp_md_compute_prop_time(int port)
 		t2_ns *= NSEC_PER_SEC;
 		t2_ns += ntohl(resp->req_receipt_ts_nsecs);
 		t2_ns += (ntohll(hdr->correction_field) >> 16);
-	}
+    }
 
 	pkt = state->rcvd_pdelay_follow_up_ptr;
 	if (pkt) {
@@ -358,11 +358,12 @@ static void gptp_md_compute_prop_time(int port)
 		t3_ns *= NSEC_PER_SEC;
 		t3_ns += ntohl(fup->resp_orig_ts_nsecs);
 		t3_ns += (ntohll(hdr->correction_field) >> 16);
-	}
+    }
 
 	prop_time = t4_ns - t1_ns;
-
 	turn_around = t3_ns - t2_ns;
+
+    //printk("Prop %f (t1:%llx t4:%llx) TA %f (t2:%llx t3:%llx)\n", prop_time, t1_ns, t4_ns, turn_around, t2_ns, t3_ns);
 
 	/* Adjusting the turn-around time for peer to local clock rate
 	 * difference. The check is implemented the same way as how Avnu/gptp
@@ -372,6 +373,7 @@ static void gptp_md_compute_prop_time(int port)
 	 */
 	if (port_ds->neighbor_rate_ratio > .998 &&
 	    port_ds->neighbor_rate_ratio < 1.002) {
+        //printk("RATE ratio: %f\n", port_ds->neighbor_rate_ratio);
 		turn_around *= port_ds->neighbor_rate_ratio;
 	}
 
@@ -394,7 +396,7 @@ static void gptp_md_pdelay_compute(int port)
 
 	if (!state->tx_pdelay_req_ptr || !state->rcvd_pdelay_resp_ptr ||
 	    !state->rcvd_pdelay_follow_up_ptr) {
-		NET_ERR("Compute path delay called without buffer ready");
+		GPTP_ERR("Compute path delay called without buffer ready");
 		port_ds->as_capable = false;
 		goto out;
 	}
@@ -406,7 +408,7 @@ static void gptp_md_pdelay_compute(int port)
 	if (port_ds->compute_neighbor_prop_delay) {
 		gptp_md_compute_prop_time(port);
 
-		NET_DBG("Neighbor prop delay %d",
+		GPTP_DBG("PDelay_Followup, Neighbor prop delay = %d",
 			(int32_t)port_ds->neighbor_prop_delay);
 	}
 
@@ -420,7 +422,7 @@ static void gptp_md_pdelay_compute(int port)
 			      hdr->port_id.clk_id,
 			      GPTP_CLOCK_ID_LEN);
 	if (local_clock) {
-		NET_WARN("Discard path delay response from local clock.");
+		GPTP_WARN("Discard path delay response from local clock.");
 		goto out;
 	}
 
@@ -435,13 +437,13 @@ static void gptp_md_pdelay_compute(int port)
 	if ((port_ds->neighbor_prop_delay <=
 	     port_ds->neighbor_prop_delay_thresh)) {
 		if (port_ds->as_capable == false) {
-		    NET_WARN("AS capable: true");
+		    GPTP_DBG("AS capable: true\n");
 		}
 		port_ds->as_capable = true;
 	} else {
 		port_ds->as_capable = false;
 
-		NET_WARN("Not AS capable: %u ns > %u ns",
+		GPTP_DBG("NOT AS capable!: %u ns > %u ns\n",
 			 (uint32_t)port_ds->neighbor_prop_delay,
 			 (uint32_t)port_ds->neighbor_prop_delay_thresh);
 
@@ -509,7 +511,7 @@ static void gptp_md_follow_up_receipt_timeout(struct k_timer *timer)
 	for (port = GPTP_PORT_START; port < GPTP_PORT_END; port++) {
 		state = &GPTP_PORT_STATE(port)->sync_rcv;
 		if (timer == &state->follow_up_discard_timer) {
-			NET_WARN("No %s received after %s message",
+			GPTP_WARN("\nTimeout! No %s received after %s message",
 				 "FOLLOWUP", "SYNC");
 			state->follow_up_timeout_expired = true;
 		}
@@ -634,6 +636,7 @@ static void gptp_md_pdelay_req_state_machine(int port)
 			port_ds->compute_neighbor_prop_delay = true;
 
 			state->pdelay_timer_expired = true;
+            GPTP_DBG("PDELY_REQ_SM: NOT_ENABLED => INITIAL");
 			state->state = GPTP_PDELAY_REQ_INITIAL_SEND_REQ;
 		}
 
@@ -646,6 +649,7 @@ static void gptp_md_pdelay_req_state_machine(int port)
 		break;
 
 	case GPTP_PDELAY_REQ_INITIAL_SEND_REQ:
+            GPTP_DBG("PDELY_REQ_SM: INITIAL => Send Req & REQ_WAIT_RESP");
 		gptp_md_start_pdelay_req(port);
 		__fallthrough;
 
@@ -692,6 +696,9 @@ static void gptp_md_pdelay_req_state_machine(int port)
 				state->state = GPTP_PDELAY_REQ_RESET;
 			}
 		}
+        if (state->state == GPTP_PDELAY_REQ_RESET) {
+            GPTP_DBG("No response to our PDELAY_REQ: => RESET");
+        }
 
 		break;
 
@@ -902,7 +909,7 @@ static void gptp_md_sync_send_state_machine(int port)
 			state->md_sync_timestamp_avail = false;
 
 			if (!state->sync_ptr) {
-				NET_ERR("Sync message not available");
+				GPTP_ERR("Sync message not available");
 				break;
 			}
 

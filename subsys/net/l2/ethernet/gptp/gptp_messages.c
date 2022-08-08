@@ -22,12 +22,12 @@ static bool sync_cb_registered;
 static bool ts_cb_registered;
 
 static const struct net_eth_addr gptp_multicast_eth_addr = {
-	{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e } };
+//	{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e } };
+	{ 0x68, 0x1d, 0xef, 0x25, 0xcd, 0xcb } };
 
 #define NET_GPTP_INFO(msg, pkt)						\
-	if (CONFIG_NET_GPTP_LOG_LEVEL >= LOG_LEVEL_DBG) {		\
+	if (1)                                      {  \
 		struct gptp_hdr *hdr = GPTP_HDR(pkt);			\
-									\
 		if (hdr->message_type == GPTP_ANNOUNCE_MESSAGE) {	\
 			struct gptp_announce *ann = GPTP_ANNOUNCE(pkt);	\
 			char output[sizeof("xx:xx:xx:xx:xx:xx:xx:xx")];	\
@@ -37,20 +37,20 @@ static const struct net_eth_addr gptp_multicast_eth_addr = {
 				output,					\
 				sizeof(output));			\
 									\
-			NET_DBG("Sending %s seq %d pkt %p",		\
+			GPTP_DBG(" Tx %s seq %d",		\
 				msg,					\
-				ntohs(hdr->sequence_id), pkt);		\
+				ntohs(hdr->sequence_id));		\
 									\
-			NET_DBG("  GM %d/%d/0x%x/%d/%s",\
+			GPTP_DBG("  GM %d/%d/0x%x/%d/%s",\
 				ann->root_system_id.grand_master_prio1, \
 				ann->root_system_id.clk_quality.clock_class, \
 				ann->root_system_id.clk_quality.clock_accuracy,\
 				ann->root_system_id.grand_master_prio2,	\
 				log_strdup(output));			\
 		} else {						\
-			NET_DBG("Sending %s seq %d pkt %p",		\
+			GPTP_DBG(" Tx %s seq %d",		\
 				msg,					\
-				ntohs(hdr->sequence_id), pkt);		\
+				ntohs(hdr->sequence_id));		\
 		}							\
 	}
 
@@ -86,7 +86,7 @@ static void gptp_sync_timestamp_callback(struct net_pkt *pkt)
 
 	port = gptp_get_port_number(net_pkt_iface(pkt));
 	if (port == -ENODEV) {
-		NET_DBG("No port found for ptp buffer");
+		GPTP_DBG("No port found for ptp buffer");
 		return;
 	}
 
@@ -114,7 +114,7 @@ static void gptp_pdelay_response_timestamp_callback(struct net_pkt *pkt)
 
 	port = gptp_get_port_number(net_pkt_iface(pkt));
 	if (port == -ENODEV) {
-		NET_DBG("No port found for ptp buffer");
+		GPTP_DBG("No port found for ptp buffer");
 		goto out;
 	}
 
@@ -125,7 +125,7 @@ static void gptp_pdelay_response_timestamp_callback(struct net_pkt *pkt)
 		follow_up = gptp_prepare_pdelay_follow_up(port, pkt);
 		if (!follow_up) {
 			/* Cannot handle the follow up, abort */
-			NET_ERR("Could not get buffer");
+			GPTP_ERR("Could not get buffer");
 			goto out;
 		}
 
@@ -194,7 +194,7 @@ struct net_pkt *gptp_prepare_sync(int port)
 
 	pkt = setup_gptp_frame(iface, sizeof(struct gptp_sync));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -249,7 +249,7 @@ struct net_pkt *gptp_prepare_follow_up(int port, struct net_pkt *sync)
 
 	pkt = setup_gptp_frame(iface, sizeof(struct gptp_follow_up));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -301,7 +301,7 @@ struct net_pkt *gptp_prepare_pdelay_req(int port)
 
 	pkt = setup_gptp_frame(iface, sizeof(struct gptp_pdelay_req));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -357,7 +357,7 @@ struct net_pkt *gptp_prepare_pdelay_resp(int port,
 
 	pkt = setup_gptp_frame(iface, sizeof(struct gptp_pdelay_resp));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -419,7 +419,7 @@ struct net_pkt *gptp_prepare_pdelay_follow_up(int port,
 	pkt = setup_gptp_frame(iface,
 			       sizeof(struct gptp_pdelay_resp_follow_up));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -488,7 +488,7 @@ struct net_pkt *gptp_prepare_announce(int port)
 	pkt = setup_gptp_frame(iface, sizeof(struct gptp_announce) - 8 +
 			       ntohs(global_ds->path_trace.len));
 	if (!pkt) {
-		NET_DBG("Cannot get gPTP frame");
+		GPTP_DBG("Cannot get gPTP frame");
 		return NULL;
 	}
 
@@ -624,7 +624,7 @@ int gptp_handle_follow_up(int port, struct net_pkt *pkt)
 	hdr = GPTP_HDR(pkt);
 
 	if (sync_hdr->sequence_id != hdr->sequence_id) {
-		NET_WARN("%s sequence id %d %s %s %d",
+		GPTP_WARN("%s sequence id %d %s %s %d",
 			 "FOLLOWUP", ntohs(hdr->sequence_id),
 			 "does not match",
 			 "SYNC", ntohs(sync_hdr->sequence_id));
@@ -644,7 +644,7 @@ void gptp_handle_pdelay_req(int port, struct net_pkt *pkt)
 
 	if (ts_cb_registered == true) {
 #ifndef CONFIG_PTP_CLOCK_LOWRISC
-		NET_WARN("Multiple pdelay requests");
+		GPTP_WARN("Multiple pdelay requests");
 #endif
 
 		net_if_unregister_timestamp_cb(&pdelay_response_timestamp_cb);
@@ -700,24 +700,24 @@ int gptp_handle_pdelay_resp(int port, struct net_pkt *pkt)
 	/* Check clock identity. */
 	if (memcmp(default_ds->clk_id, resp->requesting_port_id.clk_id,
 		   GPTP_CLOCK_ID_LEN)) {
-		NET_WARN("Requesting Clock Identity %s", "does not match");
+		GPTP_WARN("Requesting Clock Identity %s", "does not match");
 		goto reset;
 	}
 	if (memcmp(default_ds->clk_id, hdr->port_id.clk_id,
 		   GPTP_CLOCK_ID_LEN) == 0) {
-		NET_WARN("Source Clock Identity is local Clock Identity");
+		GPTP_WARN("Source Clock Identity is local Clock Identity");
 		goto reset;
 	}
 
 	/* Check port number. */
 	if (resp->requesting_port_id.port_number != htons(port)) {
-		NET_WARN("Requesting Port Number %s", "does not match");
+		GPTP_WARN("Requesting Port Number %s", "does not match");
 		goto reset;
 	}
 
 	/* Check sequence id. */
 	if (hdr->sequence_id != req_hdr->sequence_id) {
-		NET_WARN("Sequence Id %d %s %d",
+		GPTP_WARN("Sequence Id %d %s %d",
 			 ntohs(hdr->sequence_id),
 			 "does not match",
 			 ntohs(req_hdr->sequence_id));
@@ -763,25 +763,25 @@ int gptp_handle_pdelay_follow_up(int port, struct net_pkt *pkt)
 	/* Check clock identity. */
 	if (memcmp(default_ds->clk_id, follow_up->requesting_port_id.clk_id,
 		   GPTP_CLOCK_ID_LEN)) {
-		NET_WARN("Requesting Clock Identity %s", "does not match");
+		GPTP_WARN("Requesting Clock Identity %s", "does not match");
 		goto reset;
 	}
 
 	if (memcmp(default_ds->clk_id, hdr->port_id.clk_id,
 		   GPTP_CLOCK_ID_LEN) == 0) {
-		NET_WARN("Source Clock Identity is local Clock Identity");
+		GPTP_WARN("Source Clock Identity is local Clock Identity");
 		goto reset;
 	}
 
 	/* Check port number. */
 	if (follow_up->requesting_port_id.port_number != htons(port)) {
-		NET_WARN("Requesting Port Number %s", "does not match");
+		GPTP_WARN("Requesting Port Number %s", "does not match");
 		goto reset;
 	}
 
 	/* Check sequence id. */
 	if (hdr->sequence_id != req_hdr->sequence_id) {
-		NET_WARN("Sequence Id %d %s %d",
+		GPTP_WARN("Sequence Id %d %s %d",
 			 ntohs(hdr->sequence_id),
 			 "does not match",
 			 ntohs(req_hdr->sequence_id));
@@ -791,7 +791,7 @@ int gptp_handle_pdelay_follow_up(int port, struct net_pkt *pkt)
 	/* Check source port. */
 	if (memcmp(&hdr->port_id, &resp_hdr->port_id,
 		   sizeof(hdr->port_id)) != 0) {
-		NET_WARN("pDelay response and follow up port IDs %s",
+		GPTP_WARN("pDelay response and follow up port IDs %s",
 			"does not match");
 		goto reset;
 	}
@@ -852,6 +852,7 @@ void gptp_send_sync(int port, struct net_pkt *pkt)
 	net_pkt_ref(pkt);
 
 	NET_GPTP_INFO("SYNC", pkt);
+	//GPTP_INFO("Tx SYNC");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -861,6 +862,7 @@ void gptp_send_follow_up(int port, struct net_pkt *pkt)
 	GPTP_STATS_INC(port, tx_fup_count);
 
 	NET_GPTP_INFO("FOLLOWUP", pkt);
+	//GPTP_INFO("Tx FOLLOWUP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -870,6 +872,7 @@ void gptp_send_announce(int port, struct net_pkt *pkt)
 	GPTP_STATS_INC(port, tx_announce_count);
 
 	NET_GPTP_INFO("ANNOUNCE", pkt);
+	//GPTP_INFO("Tx ANNOUNCE");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -887,7 +890,7 @@ void gptp_send_pdelay_req(int port)
 	pkt = gptp_prepare_pdelay_req(port);
 	if (pkt) {
 		if (state->tx_pdelay_req_ptr) {
-			NET_DBG("Unref pending %s %p", "PDELAY_REQ",
+			GPTP_DBG("Unref pending %s %p", "PDELAY_REQ",
 				state->tx_pdelay_req_ptr);
 
 			net_pkt_unref(state->tx_pdelay_req_ptr);
@@ -899,10 +902,11 @@ void gptp_send_pdelay_req(int port)
 		GPTP_STATS_INC(port, tx_pdelay_req_count);
 
 		NET_GPTP_INFO("PDELAY_REQ", pkt);
+		//GPTP_INFO("Tx PDELAY_REQ");
 
 		net_if_queue_tx(net_pkt_iface(pkt), pkt);
 	} else {
-		NET_ERR("Failed to prepare %s", "PDELAY_REQ");
+		GPTP_ERR("Failed to prepare %s", "PDELAY_REQ");
 	}
 }
 
@@ -925,6 +929,7 @@ void gptp_send_pdelay_resp(int port, struct net_pkt *pkt,
 	GPTP_STATS_INC(port, tx_pdelay_resp_count);
 
 	NET_GPTP_INFO("PDELAY_RESP", pkt);
+	//GPTP_INFO("Tx PDELAY_RESP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -948,6 +953,7 @@ void gptp_send_pdelay_follow_up(int port, struct net_pkt *pkt,
 	GPTP_STATS_INC(port, tx_pdelay_resp_fup_count);
 
 	NET_GPTP_INFO("PDELAY_FOLLOWUP", pkt);
+	//GPTP_INFO("Tx PDELAY_FOLLOWUP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }

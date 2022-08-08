@@ -89,8 +89,8 @@ static void gptp_compute_clock_identity(int port)
  * If this changes at some point, then add log_strdup(msg) here.
  */
 #define PRINT_INFO(msg, hdr, pkt)				\
-	NET_DBG("Received %s seq %d pkt %p", msg,		\
-		ntohs(hdr->sequence_id), pkt)			\
+	GPTP_DBG("Rx %s seq %d", msg,		\
+		ntohs(hdr->sequence_id))			\
 
 
 static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
@@ -102,7 +102,7 @@ static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
 	switch (hdr->message_type) {
 	case GPTP_PATH_DELAY_REQ_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_PDELAY_REQ_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "PDELAY_REQ",
 				 GPTP_PDELAY_REQ_LEN,
@@ -114,7 +114,7 @@ static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
 
 		port = gptp_get_port_number(iface);
 		if (port == -ENODEV) {
-			NET_DBG("No port found for gPTP buffer");
+			GPTP_DBG("No port found for gPTP buffer");
 			return handled;
 		}
 
@@ -133,6 +133,26 @@ static bool gptp_handle_critical_msg(struct net_if *iface, struct net_pkt *pkt)
 	return handled;
 }
 
+//#define PRINT_TYPES
+#ifdef PRINT_TYPES
+char *my_types[] = {
+    "SYNC",
+    "DELAY_REQ",
+    "PATH_DELAY_REQ",
+    "PATH_DELAY_RESP",
+    "",
+    "",
+    "",
+    "",
+    "FOLLOWUP",
+    "DELAY_RESP",
+    "PATH_DELAY_FOLLOWUP",
+    "ANNOUNCE",
+    "SIGNALING",
+    "MANAGEMENT"
+};
+#endif
+
 static void gptp_handle_msg(struct net_pkt *pkt)
 {
 	struct gptp_hdr *hdr = GPTP_HDR(pkt);
@@ -144,17 +164,21 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 	port = gptp_get_port_number(net_pkt_iface(pkt));
 	if (port == -ENODEV) {
-		NET_DBG("No port found for ptp buffer");
+		GPTP_DBG("No port found for ptp buffer");
 		return;
 	}
 
 	pdelay_req_state = &GPTP_PORT_STATE(port)->pdelay_req;
 	sync_rcv_state = &GPTP_PORT_STATE(port)->sync_rcv;
 
+#ifdef PRINT_TYPES
+    printk("ptp type %s\n", my_types[hdr->message_type]);
+#endif
+
 	switch (hdr->message_type) {
 	case GPTP_SYNC_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_SYNC_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "SYNC",
 				 GPTP_SYNC_LEN,
@@ -164,6 +188,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		}
 
 		PRINT_INFO("SYNC", hdr, pkt);
+        GPTP_DBG("Rx SYnc");
 
 		sync_rcv_state->rcvd_sync = true;
 
@@ -180,7 +205,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_DELAY_REQ_MESSAGE:
-		NET_DBG("Delay Request not handled.");
+		GPTP_DBG("Delay Request not handled.");
 		break;
 
 	case GPTP_PATH_DELAY_REQ_MESSAGE:
@@ -190,13 +215,13 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		 * when received as they cannot afford to be delayed
 		 * by context switches.
 		 */
-		NET_WARN("Path Delay Request received as normal messages!");
+		GPTP_WARN("Path Delay Request received as normal messages!");
 		GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 		break;
 
 	case GPTP_PATH_DELAY_RESP_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_PDELAY_RESP_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "PDELAY_RESP",
 				 GPTP_PDELAY_RESP_LEN,
@@ -220,15 +245,19 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_FOLLOWUP_MESSAGE:
+#define DO_LEN_CHECK
+#ifdef DO_LEN_CHECK
 		if (GPTP_CHECK_LEN(pkt, GPTP_FOLLOW_UP_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "FOLLOWUP",
 				 GPTP_FOLLOW_UP_LEN,
 				 GPTP_PACKET_LEN(pkt));
 			GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
+            printk("Malformed Followup\n");
 			break;
 		}
+#endif
 
 		PRINT_INFO("FOLLOWUP", hdr, pkt);
 
@@ -241,13 +270,13 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 		/* Keep the pkt alive until info is extracted. */
 		sync_rcv_state->rcvd_follow_up_ptr = net_pkt_ref(pkt);
-		NET_DBG("Keeping %s seq %d pkt %p", "FOLLOWUP",
-			ntohs(hdr->sequence_id), pkt);
+		//GPTP_DBG("Keeping %s seq %d pkt %p", "FOLLOWUP",
+		//	ntohs(hdr->sequence_id), pkt);
 		break;
 
 	case GPTP_PATH_DELAY_FOLLOWUP_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_PDELAY_RESP_FUP_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "PDELAY_FOLLOWUP",
 				 GPTP_PDELAY_RESP_FUP_LEN,
@@ -273,8 +302,10 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_ANNOUNCE_MESSAGE:
+#ifdef DO_LEN_CHECK
 		if (GPTP_ANNOUNCE_CHECK_LEN(pkt)) {
-			NET_WARN("Invalid length for %s packet "
+            printk("Malformed Announce\n");
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "ANNOUNCE",
 				 GPTP_ANNOUNCE_LEN(pkt),
@@ -282,6 +313,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 			break;
 		}
+#endif
 
 		PRINT_INFO("ANNOUNCE", hdr, pkt);
 
@@ -300,7 +332,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 	case GPTP_SIGNALING_MESSAGE:
 		if (GPTP_CHECK_LEN(pkt, GPTP_SIGNALING_LEN)) {
-			NET_WARN("Invalid length for %s packet "
+			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
 				 "SIGNALING",
 				 GPTP_SIGNALING_LEN,
@@ -320,7 +352,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	default:
-		NET_DBG("Received unknown message %x", hdr->message_type);
+		GPTP_DBG("Received unknown message %x", hdr->message_type);
 		GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 		break;
 	}
@@ -346,7 +378,7 @@ enum net_verdict net_gptp_recv(struct net_if *iface, struct net_pkt *pkt)
 		 * properly updated.
 		 */
 		return NET_OK;
-	}
+    }
 
 	/* Message not propagated up in the stack. */
 	return NET_DROP;
@@ -531,7 +563,7 @@ static void gptp_state_machine(void)
 			gptp_mi_port_bmca_state_machines(port);
 			break;
 		default:
-			NET_DBG("%s: Unknown port state", __func__);
+			GPTP_DBG("%s: Unknown port state", __func__);
 			break;
 		}
 
@@ -545,7 +577,7 @@ static void gptp_thread(void)
 {
 	int port;
 
-	NET_DBG("Starting PTP thread");
+	GPTP_DBG("Starting PTP thread");
 
 	gptp_init_clock_ds();
 
@@ -948,7 +980,7 @@ static void vlan_enabled(struct k_work *work)
 
 		port = gptp_get_port_number(vlan->iface);
 		if (port < 0) {
-			NET_DBG("No port found for iface %p", vlan->iface);
+			GPTP_DBG("No port found for iface %p", vlan->iface);
 			return;
 		}
 
@@ -969,7 +1001,7 @@ static void vlan_disabled(struct k_work *work)
 
 	port = gptp_get_port_number(vlan->iface);
 	if (port < 0) {
-		NET_DBG("No port found for iface %p", vlan->iface);
+		GPTP_DBG("No port found for iface %p", vlan->iface);
 		return;
 	}
 
@@ -1003,16 +1035,16 @@ static void vlan_event_handler(struct net_mgmt_event_callback *cb,
 		/* We found the right tag, now start gPTP for this interface */
 		k_work_init(&vlan.work, vlan_enabled);
 
-		NET_DBG("VLAN tag %d %s for iface %p", tag, "enabled", iface);
+		GPTP_DBG("VLAN tag %d %s for iface %p", tag, "enabled", iface);
 	} else {
 		k_work_init(&vlan.work, vlan_disabled);
 
-		NET_DBG("VLAN tag %d %s for iface %p", tag, "disabled", iface);
+		GPTP_DBG("VLAN tag %d %s for iface %p", tag, "disabled", iface);
 	}
 
 	k_work_submit(&vlan.work);
 #else
-	NET_WARN("VLAN event but tag info missing!");
+	GPTP_WARN("VLAN event but tag info missing!");
 
 	ARG_UNUSED(tag);
 #endif
@@ -1039,7 +1071,7 @@ void net_gptp_init(void)
 	    CONFIG_NET_GPTP_VLAN_TAG < NET_VLAN_TAG_UNSPEC) {
 		setup_vlan_events_listener();
 	} else {
-		NET_WARN("VLAN tag %d set but the value is not valid.",
+		GPTP_WARN("VLAN tag %d set but the value is not valid.",
 			 CONFIG_NET_GPTP_VLAN_TAG);
 
 		init_ports();
