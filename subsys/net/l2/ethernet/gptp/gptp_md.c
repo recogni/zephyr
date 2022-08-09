@@ -363,7 +363,7 @@ static void gptp_md_compute_prop_time(int port)
 	prop_time = t4_ns - t1_ns;
 	turn_around = t3_ns - t2_ns;
 
-    //printk("Prop %f (t1:%llx t4:%llx) TA %f (t2:%llx t3:%llx)\n", prop_time, t1_ns, t4_ns, turn_around, t2_ns, t3_ns);
+    GPTP_DBG("Prop %f (t1:%llx t4:%llx) TA %f (t2:%llx t3:%llx)\n", prop_time, t1_ns, t4_ns, turn_around, t2_ns, t3_ns);
 
 	/* Adjusting the turn-around time for peer to local clock rate
 	 * difference. The check is implemented the same way as how Avnu/gptp
@@ -373,7 +373,7 @@ static void gptp_md_compute_prop_time(int port)
 	 */
 	if (port_ds->neighbor_rate_ratio > .998 &&
 	    port_ds->neighbor_rate_ratio < 1.002) {
-        //printk("RATE ratio: %f\n", port_ds->neighbor_rate_ratio);
+        GPTP_DBG("RATE ratio: %f\n", port_ds->neighbor_rate_ratio);
 		turn_around *= port_ds->neighbor_rate_ratio;
 	}
 

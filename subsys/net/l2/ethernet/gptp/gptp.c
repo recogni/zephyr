@@ -164,7 +164,7 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 	port = gptp_get_port_number(net_pkt_iface(pkt));
 	if (port == -ENODEV) {
-		GPTP_DBG("No port found for ptp buffer");
+		GPTP_WARN("No port found for ptp buffer");
 		return;
 	}
 

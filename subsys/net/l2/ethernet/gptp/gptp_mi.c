@@ -1296,7 +1296,6 @@ static void gptp_mi_port_announce_receive_state_machine(int port)
 			bmca_data->rcvd_announce_ptr = NULL;
 		}
 
-        //printk("rx annnce SM: DISCARD => RX\n");
 		state->state = GPTP_PA_RCV_RECEIVE;
 		break;
 
