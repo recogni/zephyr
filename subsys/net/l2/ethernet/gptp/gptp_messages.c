@@ -21,9 +21,13 @@ static struct net_if_timestamp_cb pdelay_response_timestamp_cb;
 static bool sync_cb_registered;
 static bool ts_cb_registered;
 
+#ifdef CONFIG_SCORPIO_GPTP_UNICAST
+static struct net_eth_addr gptp_unicast_eth_addr;
+#else
 static const struct net_eth_addr gptp_multicast_eth_addr = {
-//	{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e } };
-	{ 0x68, 0x1d, 0xef, 0x25, 0xcd, 0xcb } };
+    { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e } };
+#endif
+   
 
 #define NET_GPTP_INFO(msg, pkt)						\
 	if (1)                                      {  \
@@ -174,7 +178,19 @@ static struct net_pkt *setup_gptp_frame(struct net_if *iface,
 	net_pkt_lladdr_src(pkt)->addr = net_if_get_link_addr(iface)->addr;
 	net_pkt_lladdr_src(pkt)->len = net_if_get_link_addr(iface)->len;
 
+#ifdef CONFIG_SCORPIO_GPTP_UNICAST
+    static int do_once = 0;
+    if (do_once == 0)
+    {
+        if (net_bytes_from_str((uint8_t *)&gptp_unicast_eth_addr.addr, sizeof(struct net_eth_addr), CONFIG_SCORPIO_GPTP_UNICAST) < 0) {
+            printk("FAIL to parse gptp addr %s\n", CONFIG_SCORPIO_GPTP_UNICAST);
+        }
+        do_once++;
+    }
+	net_pkt_lladdr_dst(pkt)->addr = (uint8_t *)&gptp_unicast_eth_addr;
+#else
 	net_pkt_lladdr_dst(pkt)->addr = (uint8_t *)&gptp_multicast_eth_addr;
+#endif
 	net_pkt_lladdr_dst(pkt)->len = sizeof(struct net_eth_addr);
 
 	return pkt;
