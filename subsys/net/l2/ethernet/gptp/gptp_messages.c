@@ -868,7 +868,6 @@ void gptp_send_sync(int port, struct net_pkt *pkt)
 	net_pkt_ref(pkt);
 
 	NET_GPTP_INFO("SYNC", pkt);
-	//GPTP_INFO("Tx SYNC");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -878,7 +877,6 @@ void gptp_send_follow_up(int port, struct net_pkt *pkt)
 	GPTP_STATS_INC(port, tx_fup_count);
 
 	NET_GPTP_INFO("FOLLOWUP", pkt);
-	//GPTP_INFO("Tx FOLLOWUP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -888,7 +886,6 @@ void gptp_send_announce(int port, struct net_pkt *pkt)
 	GPTP_STATS_INC(port, tx_announce_count);
 
 	NET_GPTP_INFO("ANNOUNCE", pkt);
-	//GPTP_INFO("Tx ANNOUNCE");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -918,7 +915,6 @@ void gptp_send_pdelay_req(int port)
 		GPTP_STATS_INC(port, tx_pdelay_req_count);
 
 		NET_GPTP_INFO("PDELAY_REQ", pkt);
-		//GPTP_INFO("Tx PDELAY_REQ");
 
 		net_if_queue_tx(net_pkt_iface(pkt), pkt);
 	} else {
@@ -945,7 +941,6 @@ void gptp_send_pdelay_resp(int port, struct net_pkt *pkt,
 	GPTP_STATS_INC(port, tx_pdelay_resp_count);
 
 	NET_GPTP_INFO("PDELAY_RESP", pkt);
-	//GPTP_INFO("Tx PDELAY_RESP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }
@@ -969,7 +964,6 @@ void gptp_send_pdelay_follow_up(int port, struct net_pkt *pkt,
 	GPTP_STATS_INC(port, tx_pdelay_resp_fup_count);
 
 	NET_GPTP_INFO("PDELAY_FOLLOWUP", pkt);
-	//GPTP_INFO("Tx PDELAY_FOLLOWUP");
 
 	net_if_queue_tx(net_pkt_iface(pkt), pkt);
 }

@@ -245,8 +245,6 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_FOLLOWUP_MESSAGE:
-#define DO_LEN_CHECK
-#ifdef DO_LEN_CHECK
 		if (GPTP_CHECK_LEN(pkt, GPTP_FOLLOW_UP_LEN)) {
 			GPTP_WARN("Invalid length for %s packet "
 				 "should have %zd bytes but has %zd bytes",
@@ -257,7 +255,6 @@ static void gptp_handle_msg(struct net_pkt *pkt)
             printk("Malformed Followup\n");
 			break;
 		}
-#endif
 
 		PRINT_INFO("FOLLOWUP", hdr, pkt);
 
@@ -270,8 +267,8 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 
 		/* Keep the pkt alive until info is extracted. */
 		sync_rcv_state->rcvd_follow_up_ptr = net_pkt_ref(pkt);
-		//GPTP_DBG("Keeping %s seq %d pkt %p", "FOLLOWUP",
-		//	ntohs(hdr->sequence_id), pkt);
+		GPTP_DBG("Keeping %s seq %d pkt %p", "FOLLOWUP",
+			ntohs(hdr->sequence_id), pkt);
 		break;
 
 	case GPTP_PATH_DELAY_FOLLOWUP_MESSAGE:
@@ -302,7 +299,6 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 		break;
 
 	case GPTP_ANNOUNCE_MESSAGE:
-#ifdef DO_LEN_CHECK
 		if (GPTP_ANNOUNCE_CHECK_LEN(pkt)) {
             printk("Malformed Announce\n");
 			GPTP_WARN("Invalid length for %s packet "
@@ -313,7 +309,6 @@ static void gptp_handle_msg(struct net_pkt *pkt)
 			GPTP_STATS_INC(port, rx_ptp_packet_discard_count);
 			break;
 		}
-#endif
 
 		PRINT_INFO("ANNOUNCE", hdr, pkt);
 

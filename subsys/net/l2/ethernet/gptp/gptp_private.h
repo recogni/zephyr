@@ -120,7 +120,6 @@ static inline uint64_t gptp_timestamp_to_nsec(struct net_ptp_time *ts)
 }
 
 #ifdef GPTP_LOGGING
-//#define GPTP_DBG(fmt, ...) printk("Dbg: "fmt"\n", ##__VA_ARGS__)
 #define GPTP_DBG(fmt, ...)
 #define GPTP_ERR(fmt, ...) printk("Err: "fmt"\n", ##__VA_ARGS__)
 #define GPTP_WARN(fmt, ...) printk("Wrn: "fmt"\n", ##__VA_ARGS__)

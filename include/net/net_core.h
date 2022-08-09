@@ -52,16 +52,9 @@ extern "C" {
 				  ##__VA_ARGS__)
 #endif /* CONFIG_THREAD_NAME */
 
-#ifdef FOO
-#define NET_DBG(fmt, ...) printk("Dbg: "fmt"\n", ##__VA_ARGS__)
-#define NET_ERR(fmt, ...) printk("Err: "fmt"\n", ##__VA_ARGS__)
-#define NET_WARN(fmt, ...) printk("Wrn: "fmt"\n", ##__VA_ARGS__)
-#define NET_INFO(fmt, ...) printk("Inf: "fmt"\n",  ##__VA_ARGS__)
-#else //FOO
 #define NET_ERR(fmt, ...) LOG_ERR(fmt, ##__VA_ARGS__)
 #define NET_WARN(fmt, ...) LOG_WRN(fmt, ##__VA_ARGS__)
 #define NET_INFO(fmt, ...) LOG_INF(fmt,  ##__VA_ARGS__)
-#endif //FOO
 
 #define NET_HEXDUMP_DBG(_data, _length, _str) LOG_HEXDUMP_DBG(_data, _length, _str)
 #define NET_HEXDUMP_ERR(_data, _length, _str) LOG_HEXDUMP_ERR(_data, _length, _str)
