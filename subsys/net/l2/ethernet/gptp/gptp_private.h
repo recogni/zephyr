@@ -20,8 +20,6 @@
 extern "C" {
 #endif
 
-#define GPTP_LOGGING
-
 /* Common defines for the gPTP stack. */
 #define GPTP_THREAD_WAIT_TIMEOUT_MS 1
 #define GPTP_MULTIPLE_PDELAY_RESP_WAIT (5 * 60 * MSEC_PER_SEC)
@@ -119,7 +117,7 @@ static inline uint64_t gptp_timestamp_to_nsec(struct net_ptp_time *ts)
 	return (ts->second * NSEC_PER_SEC) + ts->nanosecond;
 }
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
 #define GPTP_DBG(fmt, ...)
 #define GPTP_ERR(fmt, ...) printk("Err: "fmt"\n", ##__VA_ARGS__)
 #define GPTP_WARN(fmt, ...) printk("Wrn: "fmt"\n", ##__VA_ARGS__)
@@ -136,7 +134,7 @@ static inline uint64_t gptp_timestamp_to_nsec(struct net_ptp_time *ts)
  * @param port Port number of the clock to use.
  * @param state New state
  */
-#ifndef GPTP_LOGGING
+#ifndef CONFIG_GPTP_LOGGING
 void gptp_change_port_state(int port, enum gptp_port_state state);
 #else
 #define gptp_change_port_state(port, state)			\
@@ -146,7 +144,7 @@ void gptp_change_port_state_debug(int port, enum gptp_port_state state,
 				  const char *caller, int line);
 #endif
 
-#ifndef GPTP_LOGGING
+#ifndef CONFIG_GPTP_LOGGING
 void gptp_change_pa_info_state(
 	int port,
 	struct gptp_port_announce_information_state *pa_info_state,

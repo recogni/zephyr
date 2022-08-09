@@ -14,7 +14,7 @@ LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 #include "gptp_state.h"
 #include "gptp_private.h"
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
 static const char * const state2str(enum gptp_port_state state)
 {
 	switch (state) {
@@ -68,9 +68,9 @@ static const char * const pa_info_state2str(enum gptp_pa_info_states state)
 	return "<unknown>";
 }
 #endif //CONFIG_NET_GPTP_LOG_LEVEL >= LOG_LEVEL_DBG
-#endif //GPTP_LOGGING
+#endif //CONFIG_GPTP_LOGGING
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
 void gptp_change_port_state_debug(int port, enum gptp_port_state state,
 				  const char *caller,
 				  int line)
@@ -84,7 +84,7 @@ void gptp_change_port_state(int port, enum gptp_port_state state)
 		return;
 	}
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
     if (port >= 1)
     {
 	GPTP_WARN("[%d] global state %s -> %s (%s():%d)", port,
@@ -96,7 +96,7 @@ void gptp_change_port_state(int port, enum gptp_port_state state)
 	global_ds->selected_role[port] = state;
 };
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
 void gptp_change_pa_info_state_debug(
 	int port,
 	struct gptp_port_announce_information_state *pa_info_state,
@@ -114,7 +114,7 @@ void gptp_change_pa_info_state(
 		return;
 	}
 
-#ifdef GPTP_LOGGING
+#ifdef CONFIG_GPTP_LOGGING
     GPTP_DBG("PA info state %s -> %s (%s():%d)",
 		pa_info_state2str(pa_info_state->state),
 		pa_info_state2str(state), caller, line);
