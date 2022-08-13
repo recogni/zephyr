@@ -661,6 +661,22 @@ static inline bool net_eth_is_addr_multicast(struct net_eth_addr *addr)
 	return false;
 }
 
+static inline bool net_eth_is_addr_gptp_multicast(struct net_eth_addr *addr)
+{
+#if defined(CONFIG_NET_GPTP)
+	if (addr->addr[0] == 0x01 &&
+	    addr->addr[1] == 0x1b &&
+	    addr->addr[2] == 0x19 &&
+	    addr->addr[3] == 0x00 &&
+	    addr->addr[4] == 0x00 &&
+	    addr->addr[5] == 0x00) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
 static inline bool net_eth_is_addr_lldp_multicast(struct net_eth_addr *addr)
 {
 #if defined(CONFIG_NET_GPTP) || defined(CONFIG_NET_LLDP)

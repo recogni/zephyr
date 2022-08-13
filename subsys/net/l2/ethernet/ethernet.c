@@ -300,6 +300,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 
 	if (!net_eth_is_addr_broadcast((struct net_eth_addr *)lladdr->addr) &&
 	    !net_eth_is_addr_multicast((struct net_eth_addr *)lladdr->addr) &&
+        !net_eth_is_addr_gptp_multicast((struct net_eth_addr *)lladdr->addr) &&
 	    !net_eth_is_addr_lldp_multicast(
 		    (struct net_eth_addr *)lladdr->addr) &&
 	    !net_linkaddr_cmp(net_if_get_link_addr(iface), lladdr)) {

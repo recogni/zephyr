@@ -836,7 +836,7 @@ static void gptp_update_local_port_clock(void)
 		 * what time we are setting to the local clock.
 		 */
 		if (0) {
-			NET_INFO("Set local clock %lu.%lu",
+			GPTP_WARN("Set local clock %lu.%lu",
 				 (unsigned long int)tm.second,
 				 (unsigned long int)tm.nanosecond);
 		}
