@@ -1,4 +1,8 @@
 identifier: tlsr9518adk80d
+# FIXME: This platform is broken due to the incorrect linker script and cannot
+#        be compiled using the current version of the Zephyr SDK. For more
+#        details, refer to the GitHub issue #49036.
+twister: false
 name: Telink TLSR9518ADK80D
 type: mcu
 arch: riscv32
