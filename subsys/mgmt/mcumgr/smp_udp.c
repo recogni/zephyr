@@ -70,10 +70,6 @@ static int smp_udp4_tx(struct zephyr_smp_transport *zst, struct net_buf *nb)
 			 0, addr, sizeof(*addr));
 	mcumgr_buf_free(nb);
 
-	if (ret <0) {
-		printf("%s: sendto failed!\n", __FUNCTION__);
-	}
-
 	return ret < 0 ? MGMT_ERR_EINVAL : MGMT_ERR_EOK;
 }
 #endif
