@@ -809,7 +809,7 @@ static void gptp_update_local_port_clock(void)
 		ptp_clock_get(clk, &tm);
 
 		if (second_diff < 0 && tm.second < -second_diff) {
-			GPTP_DBG("Do not set local clock because %lu < %ld",
+			GPTP_WARN("Do not set local clock because %lu < %ld",
 				(unsigned long int)tm.second,
 				(long int)-second_diff);
 			goto skip_clock_set;

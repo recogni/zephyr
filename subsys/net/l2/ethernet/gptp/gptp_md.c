@@ -12,7 +12,8 @@ LOG_MODULE_DECLARE(net_gptp, CONFIG_NET_GPTP_LOG_LEVEL);
 #include "gptp_data_set.h"
 #include "gptp_private.h"
 
-#ifdef CONFIG_PTP_CLOCK_LOWRISC
+//#define DIRECT_FROM_SYNC
+#ifdef DIRECT_FROM_SYNC
 #include <posix/time.h>
 #endif
 
@@ -105,7 +106,7 @@ static int gptp_set_md_sync_receive(int port,
 	struct net_ptp_time *sync_ts;
 	double prop_delay_rated;
 	double delay_asymmetry_rated;
-#ifdef CONFIG_PTP_CLOCK_LOWRISC
+#ifdef DIRECT_FROM_SYNC
 #define UPDATE_SECS        30
         static int count = UPDATE_SECS;
 #endif
@@ -137,17 +138,18 @@ static int gptp_set_md_sync_receive(int port,
 	sync_rcv->upstream_tx_time *= NSEC_PER_SEC;
 	sync_rcv->upstream_tx_time += sync_ts->nanosecond;
 
-#ifdef CONFIG_PTP_CLOCK_LOWRISC
+#ifdef DIRECT_FROM_SYNC
         if (++count >= UPDATE_SECS) {
+                printk("Gotta Sync, set REALTIME\n");
                 struct timespec tp;
                 tp.tv_sec = sync_rcv->precise_orig_ts.second;
                 tp.tv_nsec = sync_rcv->precise_orig_ts.nanosecond;
                 clock_settime(CLOCK_REALTIME, &tp);
 
-                if (0) {
+                if (1) {
                         struct tm tm, *tm_p = &tm;
                         gmtime_r(&tp.tv_sec, tm_p);
-                        GPTP_WARN("seq %d sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC",
+                        printk("seq %d sec:ns  %d:%d  %d-%02u-%02u " "%02u:%02u:%02u UTC\n",
 				ntohs(fup_hdr->sequence_id),
 			    sync_rcv->precise_orig_ts._sec.low, sync_rcv->precise_orig_ts.nanosecond,
                             tm_p->tm_year + 1900,
