@@ -15,7 +15,12 @@
 #define RAMDISK_SECTOR_SIZE 512
 #define RAMDISK_VOLUME_SIZE (CONFIG_DISK_RAM_VOLUME_SIZE * 1024)
 
+#if defined(CONFIG_SCORPIO_SCPU)
+#include "hal/scorpio_heap.h"
+static uint8_t *ramdisk_buf;
+#else
 static uint8_t ramdisk_buf[RAMDISK_VOLUME_SIZE];
+#endif
 
 static void *lba_to_address(uint32_t lba)
 {
@@ -88,6 +93,15 @@ static struct disk_info ram_disk = {
 static int disk_ram_init(const struct device *dev)
 {
 	ARG_UNUSED(dev);
+
+#if defined(CONFIG_SCORPIO_SCPU)
+	ramdisk_buf = scorpio_dma_heap_alloc(32, RAMDISK_VOLUME_SIZE, K_NO_WAIT);
+	if (ramdisk_buf == NULL)
+	{
+		printk("RAMDISK: error : unable to allocate disk buffer\n");
+		return -1;
+	}
+#endif
 
 	return disk_access_register(&ram_disk);
 }
