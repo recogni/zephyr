@@ -1004,10 +1004,6 @@ static inline k_ticks_t z_vrfy_k_thread_timeout_expires_ticks(
 #ifdef CONFIG_INSTRUMENT_THREAD_SWITCHING
 void z_thread_mark_switched_in(void)
 {
-#ifdef CONFIG_TRACING
-	SYS_PORT_TRACING_FUNC(k_thread, switched_in);
-#endif
-
 #ifdef CONFIG_THREAD_RUNTIME_STATS
 	struct k_thread *thread;
 
@@ -1019,6 +1015,14 @@ void z_thread_mark_switched_in(void)
 #endif /* CONFIG_THREAD_RUNTIME_STATS_USE_TIMING_FUNCTIONS */
 
 #endif /* CONFIG_THREAD_RUNTIME_STATS */
+
+#ifdef CONFIG_TRACING
+    const char *tname = k_thread_name_get(thread);
+    if (strncmp(tname, "main", strlen("main") != 0) && strncmp(tname, "idle 00", strlen("idle 00") != 0)) {
+        SYS_PORT_TRACING_FUNC(k_thread, switched_in);
+    }
+#endif
+
 }
 
 void z_thread_mark_switched_out(void)
@@ -1060,7 +1064,10 @@ void z_thread_mark_switched_out(void)
 #endif /* CONFIG_THREAD_RUNTIME_STATS */
 
 #ifdef CONFIG_TRACING
-	SYS_PORT_TRACING_FUNC(k_thread, switched_out);
+    const char *tname = k_thread_name_get(thread);
+    if (strncmp(tname, "main", strlen("main") != 0) && strncmp(tname, "idle 00", strlen("idle 00") != 0)) {
+        SYS_PORT_TRACING_FUNC(k_thread, switched_out);
+    }
 #endif
 }
 
