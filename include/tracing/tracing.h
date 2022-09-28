@@ -8,6 +8,15 @@
 
 #include <kernel.h>
 
+#if defined(CONFIG_TRACING)
+extern bool is_sys_trace_active;
+#define get_sys_trace_active() is_sys_trace_active
+#define set_sys_trace_active(x) is_sys_trace_active = x
+#else
+#define get_sys_trace_active() 0
+#define set_sys_trace_active(x)
+#endif
+
 #if defined CONFIG_SEGGER_SYSTEMVIEW
 #include "tracing_sysview.h"
 
