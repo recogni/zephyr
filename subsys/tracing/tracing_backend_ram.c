@@ -43,3 +43,14 @@ const struct tracing_backend_api tracing_backend_ram_api = {
 };
 
 TRACING_BACKEND_DEFINE(tracing_backend_ram, tracing_backend_ram_api);
+
+int tracing_ram_info_get(uint8_t **addr, int *len, uint32_t *offset)
+{
+    if (addr != NULL)
+        *addr = ram_tracing;
+    if (len != NULL)
+        *len = CONFIG_RAM_TRACING_BUFFER_SIZE;
+    if (offset != NULL)
+        *offset = pos;
+    return 0;
+}
