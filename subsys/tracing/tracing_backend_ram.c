@@ -12,7 +12,7 @@
 #include <tracing_backend.h>
 
 uint8_t ram_tracing[CONFIG_RAM_TRACING_BUFFER_SIZE];
-uint32_t ram_tracing_pos;
+static uint32_t pos;
 static bool buffer_full;
 
 static void tracing_backend_ram_output(
@@ -23,13 +23,13 @@ static void tracing_backend_ram_output(
 		return;
 	}
 
-	if ((ram_tracing_pos + length) > CONFIG_RAM_TRACING_BUFFER_SIZE) {
+	if ((pos + length) > CONFIG_RAM_TRACING_BUFFER_SIZE) {
 		buffer_full = true;
 		return;
 	}
 
-	memcpy(ram_tracing + ram_tracing_pos, data, length);
-	ram_tracing_pos += length;
+	memcpy(ram_tracing + pos, data, length);
+	pos += length;
 }
 
 static void tracing_backend_ram_init(void)
