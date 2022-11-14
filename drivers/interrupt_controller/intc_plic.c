@@ -145,6 +145,11 @@ static void plic_irq_handler(const void *arg)
 	/* Get the IRQ number generating the interrupt */
 	irq = regs->claim_complete;
 
+#if defined(CONFIG_RISCV_SUPERVISOR)
+	if (irq == 0U)
+		goto done;
+#endif
+
 	/*
 	 * Save IRQ in save_irq. To be used, if need be, by
 	 * subsequent handlers registered in the _sw_isr_table table,
@@ -173,9 +178,9 @@ static void plic_irq_handler(const void *arg)
 	regs->claim_complete = save_irq;
 
 #if defined(CONFIG_RISCV_SUPERVISOR)
-       arch_syscall_invoke2(MIP_SEIP, MIP_MEIP, SET_MIP_MIE_SYSCALL_ID);
+done:
+	arch_syscall_invoke2(MIP_SEIP, MIP_MEIP, SET_MIP_MIE_SYSCALL_ID);
 #endif
-
 }
 
 /**
