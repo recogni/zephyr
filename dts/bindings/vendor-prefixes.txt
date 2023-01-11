@@ -224,6 +224,7 @@ gef	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
 GEFanuc	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
 gemei	Gemei Digital Technology Co., Ltd.
 geniatech	Geniatech, Inc.
+geosemi	GEO Semiconductor, Inc.
 giantec	Giantec Semiconductor, Inc.
 giantplus	Giantplus Technology Co., Ltd.
 globalscale	Globalscale Technologies, Inc.
@@ -488,6 +489,7 @@ raspberrypi	Raspberry Pi Foundation
 raydium	Raydium Semiconductor Corp.
 rda	Unisoc Communications, Inc.
 realtek	Realtek Semiconductor Corp.
+recogni	Recogni, Inc.
 remarkable	reMarkable AS
 renesas	Renesas Electronics Corporation
 rex	iMX6 Rex Project
