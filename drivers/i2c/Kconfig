@@ -22,6 +22,13 @@ config I2C_SHELL
 
 	  The I2C shell currently support scanning and bus recovery.
 
+
+config I2C_DEVICE_PREFIX
+	string "I2C device search prefix"
+	default "I2C_"
+	help 
+		Custom i2c device prefix for shell autocomplete.
+
 # Include these first so that any properties (e.g. defaults) below can be
 # overridden (by defining symbols in multiple locations)
 source "drivers/i2c/Kconfig.b91"
