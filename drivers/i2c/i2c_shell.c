@@ -14,7 +14,11 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(i2c_shell, CONFIG_LOG_DEFAULT_LEVEL);
 
+#ifndef CONFIG_I2C_DEVICE_PREFIX
 #define I2C_DEVICE_PREFIX "I2C_"
+#else // !CONFIG_I2C_DEVICE_PREFIX
+#define I2C_DEVICE_PREFIX CONFIG_I2C_DEVICE_PREFIX
+#endif // CONFIG_I2C_DEVICE_PREFIX
 
 /* Maximum bytes we can write or read at once */
 #define MAX_I2C_BYTES	16
