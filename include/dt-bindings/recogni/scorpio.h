@@ -1,0 +1,6 @@
+#pragma once 
+
+#define SCORPIO_BOARD_HANK      0
+#define SCORPIO_BOARD_DORITO    1
+#define SCORPIO_BOARD_PHOENIX   2
+#define SCORPIO_BOARD_UNKNOWN   0xFFFFFFFF
