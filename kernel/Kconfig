@@ -497,6 +497,13 @@ config NUM_MBOX_ASYNC_MSGS
 	  Setting this option to 0 disables support for asynchronous
 	  mailbox messages.
 
+config PIPES
+	bool "Pipe objects"
+	help
+	  This option enables kernel pipes. A pipe is a kernel object that
+	  allows a thread to send a byte stream to another thread. Pipes can
+	  be used to synchronously transfer chunks of data in whole or in part.
+
 config KERNEL_MEM_POOL
 	bool "Use Kernel Memory Pool"
 	default y
