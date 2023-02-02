@@ -36,7 +36,6 @@ list(APPEND kernel_files
   mailbox.c
   msg_q.c
   mutex.c
-  pipes.c
   queue.c
   sem.c
   stack.c
@@ -80,6 +79,7 @@ target_sources_ifdef(CONFIG_SYS_CLOCK_EXISTS      kernel PRIVATE timeout.c timer
 target_sources_ifdef(CONFIG_ATOMIC_OPERATIONS_C   kernel PRIVATE atomic_c.c)
 target_sources_ifdef(CONFIG_MMU                   kernel PRIVATE mmu.c)
 target_sources_ifdef(CONFIG_POLL                  kernel PRIVATE poll.c)
+target_sources_ifdef(CONFIG_PIPES                 kernel PRIVATE pipes.c)
 
 if(${CONFIG_KERNEL_MEM_POOL})
   target_sources(kernel PRIVATE mempool.c)
