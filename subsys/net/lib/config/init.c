@@ -418,7 +418,12 @@ static void iface_find_cb(struct net_if *iface, void *user_data)
 {
 	struct net_if **iface_to_use = user_data;
 
-	if (*iface_to_use == NULL &&
+/* Normally  return the first interface we find but on scorpio
+ * where we have two interfaces, return the last. */
+    if (
+#if !defined(CONFIG_ETH_PCIE) || !defined(CONFIG_ETH_E1000E)
+	*iface_to_use == NULL &&
+#endif
 	    !net_if_flag_is_set(iface, NET_IF_NO_AUTO_START)) {
 		*iface_to_use = iface;
 		return;
