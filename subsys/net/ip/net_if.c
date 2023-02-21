@@ -525,11 +525,12 @@ int net_if_set_link_addr_locked(struct net_if *iface,
 struct net_if *net_if_get_by_link_addr(struct net_linkaddr *ll_addr)
 {
 #if defined(CONFIG_ETH_PCIE) && defined(CONFIG_ETH_E1000E)
-    struct net_if *ret_iface = NULL;
+	/* Return the last iface with this addr, not the first */
+	struct net_if *ret_iface = NULL;
 	STRUCT_SECTION_FOREACH(net_if, iface) {
 		if (!memcmp(net_if_get_link_addr(iface)->addr, ll_addr->addr,
 			    ll_addr->len)) {
-            ret_iface = iface;
+                    ret_iface = iface;
 		}
 	}
 	return ret_iface;
@@ -566,7 +567,8 @@ struct net_if *net_if_get_default(void)
 
 #if defined(CONFIG_NET_DEFAULT_IF_ETHERNET)
 #if defined(CONFIG_ETH_PCIE) && defined(CONFIG_ETH_E1000E)
-	iface = net_if_get_by_index(2);     /* Scorpio with 2 ifaces, return 2nd */
+	/* Scorpio with 2 ifaces, return 2nd */
+	iface = net_if_get_by_index(2);
 #else
 	iface = net_if_get_first_by_type(&NET_L2_GET_NAME(ETHERNET));
 #endif
@@ -3070,7 +3072,6 @@ struct net_if *net_if_ipv4_select_src_iface(const struct in_addr *dst)
 
 	k_mutex_lock(&lock, K_FOREVER);
 
-#if !defined(CONFIG_ETH_PCIE) || !defined(CONFIG_ETH_E1000E)
 	STRUCT_SECTION_FOREACH(net_if, iface) {
 		bool ret;
 
@@ -3080,15 +3081,12 @@ struct net_if *net_if_ipv4_select_src_iface(const struct in_addr *dst)
 			goto out;
 		}
 	}
-#endif
 
 	if (selected == NULL) {
 		selected = net_if_get_default();
 	}
 
-#if !defined(CONFIG_ETH_PCIE) || !defined(CONFIG_ETH_E1000E)
 out:
-#endif
 	k_mutex_unlock(&lock);
 
 	return selected;
