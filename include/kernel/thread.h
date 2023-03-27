@@ -50,6 +50,7 @@ struct _pipe_desc {
 	sys_dnode_t      node;
 	unsigned char   *buffer;         /* Position in src/dest buffer */
 	size_t           bytes_to_xfer;  /* # bytes left to transfer */
+	size_t           min_xfer;       /* Minimum # bytes left to transfer */
 	struct k_thread *thread;         /* Back pointer to pended thread */
 };
 

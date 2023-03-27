@@ -321,6 +321,7 @@ static size_t pipe_write(struct k_pipe *pipe, sys_dlist_t *src_list,
 
 		dest->buffer        += bytes_copied;
 		dest->bytes_to_xfer -= bytes_copied;
+		dest->min_xfer      -= MIN(bytes_copied, dest->min_xfer);
 
 		src->buffer         += bytes_copied;
 		src->bytes_to_xfer  -= bytes_copied;
@@ -334,7 +335,7 @@ static size_t pipe_write(struct k_pipe *pipe, sys_dlist_t *src_list,
 			if (pipe->write_index >= pipe->size) {
 				pipe->write_index -= pipe->size;
 			}
-		} else if (dest->bytes_to_xfer == 0U) {
+		} else if (dest->bytes_to_xfer == 0U || dest->min_xfer == 0U) {
 
 			/* The thread's read request has been satisfied. */
 
@@ -555,6 +556,7 @@ static int pipe_get_internal(k_spinlock_key_t key, struct k_pipe *pipe,
 
 	dest_desc->buffer = data;
 	dest_desc->bytes_to_xfer = bytes_to_read;
+	dest_desc->min_xfer = min_xfer;
 	dest_desc->thread = _current;
 
 	src_desc = (struct _pipe_desc *)sys_dlist_get(&src_list);
@@ -568,6 +570,7 @@ static int pipe_get_internal(k_spinlock_key_t key, struct k_pipe *pipe,
 
 		src_desc->buffer += bytes_copied;
 		src_desc->bytes_to_xfer -= bytes_copied;
+		src_desc->min_xfer -= MIN(bytes_copied, src_desc->min_xfer);
 
 		if (dest_desc->buffer != NULL) {
 			dest_desc->buffer += bytes_copied;
@@ -583,7 +586,7 @@ static int pipe_get_internal(k_spinlock_key_t key, struct k_pipe *pipe,
 			if (pipe->read_index >= pipe->size) {
 				pipe->read_index -= pipe->size;
 			}
-		} else if (src_desc->bytes_to_xfer == 0U) {
+		} else if (src_desc->bytes_to_xfer == 0U || src_desc->min_xfer == 0U) {
 
 			/* The thread's write request has been satisfied. */
 
