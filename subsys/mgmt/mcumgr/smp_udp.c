@@ -112,6 +112,7 @@ static int smp_udp_ud_copy(struct net_buf *dst, const struct net_buf *src)
 static void smp_udp_receive_thread(void *p1, void *p2, void *p3)
 {
 	struct config *conf = (struct config *)p1;
+	struct net_buf *nb = NULL;
 
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
@@ -122,26 +123,33 @@ static void smp_udp_receive_thread(void *p1, void *p2, void *p3)
 		struct sockaddr addr;
 		socklen_t addr_len = sizeof(addr);
 
-		int len = recvfrom(conf->sock, conf->recv_buffer,
-				   CONFIG_MCUMGR_SMP_UDP_MTU,
-				   0, &addr, &addr_len);
+		if (!nb) {
+			nb = mcumgr_buf_alloc();
+		}
+
+		int len = recvfrom(conf->sock,
+				   nb ? (char *)net_buf_simple_tail(&nb->b) : conf->recv_buffer,
+				   CONFIG_MCUMGR_SMP_UDP_MTU, 0, &addr, &addr_len);
 
 		if (len > 0) {
 			struct sockaddr *ud;
-			struct net_buf *nb;
-
 			/* store sender address in user data for reply */
-			nb = mcumgr_buf_alloc();
-			if (!nb) {
-				LOG_ERR("Failed to allocate mcumgr buffer");
-				/* No free space, drop smp frame */
-				continue;
+			if (nb) {
+				net_buf_simple_add(&nb->b, len);
+			} else {
+				nb = mcumgr_buf_alloc();
+				if (!nb) {
+					LOG_ERR("Failed to allocate mcumgr buffer");
+					/* No free space, drop smp frame */
+					continue;
+				}
+				net_buf_add_mem(nb, conf->recv_buffer, len);
 			}
-			net_buf_add_mem(nb, conf->recv_buffer, len);
 			ud = net_buf_user_data(nb);
 			net_ipaddr_copy(ud, &addr);
 
 			zephyr_smp_rx_req(&conf->smp_transport, nb);
+			nb = NULL;
 		} else if (len < 0) {
 			LOG_ERR("recvfrom error (%s): %i", conf->proto, errno);
 		}
