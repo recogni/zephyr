@@ -97,6 +97,8 @@ typedef enum {
 	CTF_EVENT_MUTEX_LOCK_EXIT = 0x2B,
 	CTF_EVENT_MUTEX_UNLOCK_ENTER = 0x2C,
 	CTF_EVENT_MUTEX_UNLOCK_EXIT = 0x2D,
+	CTF_EVENT_SCORPIO_ENTER = 0x2E,
+	CTF_EVENT_SCORPIO_EXIT = 0x2F,
 } ctf_event_t;
 
 typedef struct {
@@ -130,6 +132,21 @@ static inline void ctf_top_thread_create(uint32_t thread_id, int8_t prio,
 	CTF_EVENT(CTF_LITERAL(uint8_t, CTF_EVENT_THREAD_CREATE), thread_id,
 		  name);
 }
+
+static inline void ctf_top_scorpio_enter(uint32_t thread_id,
+                                       ctf_bounded_string_t name)
+{
+	CTF_EVENT(CTF_LITERAL(uint8_t, CTF_EVENT_SCORPIO_ENTER), thread_id,
+		  name);
+}
+
+static inline void ctf_top_scorpio_exit(uint32_t thread_id,
+                                       ctf_bounded_string_t name)
+{
+	CTF_EVENT(CTF_LITERAL(uint8_t, CTF_EVENT_SCORPIO_EXIT), thread_id,
+		  name);
+}
+
 
 static inline void ctf_top_thread_abort(uint32_t thread_id,
 					ctf_bounded_string_t name)

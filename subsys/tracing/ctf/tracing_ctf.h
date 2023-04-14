@@ -56,9 +56,13 @@ extern "C" {
 #define sys_port_trace_k_thread_name_set(thread, ret)                          \
 	sys_trace_k_thread_name_set(thread, ret)
 
+#if defined(CONFIG_TRACING_THREAD)
 #define sys_port_trace_k_thread_switched_out() sys_trace_k_thread_switched_out()
-
 #define sys_port_trace_k_thread_switched_in() sys_trace_k_thread_switched_in()
+#else
+#define sys_port_trace_k_thread_switched_out()
+#define sys_port_trace_k_thread_switched_in()
+#endif
 
 #define sys_port_trace_k_thread_info(thread) sys_trace_k_thread_info(thread)
 

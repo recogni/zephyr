@@ -208,10 +208,12 @@ void sys_trace_isr_exit_to_scheduler(void)
 
 void sys_trace_idle(void)
 {
+#if defined(CONFIG_TRACING_THREAD)
 	if (!is_sys_trace_active) {
 		return;
 	}
 	ctf_top_idle();
+#endif
 }
 
 /* Semaphore */
@@ -356,6 +358,32 @@ void sys_trace_k_mutex_unlock_exit(struct k_mutex *mutex, int ret)
 		(uint32_t)(uintptr_t)mutex,
 		(int32_t)ret
 		);
+}
+
+void sys_trace_scorp_ctf_enter(const char *string)
+{
+    if (!is_sys_trace_active) {
+        return;
+    }
+
+    ctf_bounded_string_t ctf_string;
+    strncpy(ctf_string.buf, string, sizeof(ctf_string.buf));
+    ctf_string.buf[sizeof(ctf_string.buf) - 1] = 0;
+
+    ctf_top_scorpio_enter(0, ctf_string);
+}
+
+void sys_trace_scorp_ctf_exit(const char *string)
+{
+    if (!is_sys_trace_active) {
+        return;
+    }
+
+    ctf_bounded_string_t ctf_string;
+    strncpy(ctf_string.buf, string, sizeof(ctf_string.buf));
+    ctf_string.buf[sizeof(ctf_string.buf) - 1] = 0;
+
+    ctf_top_scorpio_exit(0, ctf_string);
 }
 
 /* Timer */

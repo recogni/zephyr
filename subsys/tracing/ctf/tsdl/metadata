@@ -285,3 +285,20 @@ event {
 	};
 };
 
+event {
+	name = scorpio_enter;
+	id = 0x2E;
+	fields := struct {
+		uint32_t misc;
+		ctf_bounded_string_t name[20];
+	};
+};
+
+event {
+	name = scorpio_exit;
+	id = 0x2F;
+	fields := struct {
+		uint32_t misc;
+		ctf_bounded_string_t name[20];
+	};
+};
