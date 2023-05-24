@@ -80,6 +80,20 @@ static const char *swap_state_flag_str(uint8_t flag)
 	return "unknown";
 }
 
+static int flash_area_id_from_slot_id(const int slot_id)
+{
+	// The flash area ID for a given slot is one more than
+	// the "slot_id" that is used by mcuboot etc.
+	return slot_id + 1;
+}
+
+static int slot_id_from_flash_area_id(const int flash_area_id)
+{
+	// The flash area ID for a given slot is one more than
+	// the "slot_id" that is used by mcuboot etc.
+	return flash_area_id - 1;
+}
+
 static int cmd_mcuboot_erase(const struct shell *shell, size_t argc,
 			     char **argv)
 {
@@ -118,7 +132,7 @@ static int cmd_mcuboot_erase(const struct shell *shell, size_t argc,
 					{
 						shell_error(shell, "Confirm %s before deleting %s", areas[other].name, areas[i].name);
 					} else {
-						shell_print(shell, "Erasing %s area (%u)", area->name, area->id);
+						shell_print(shell, "Erasing %s area (slot=%u)", area->name, slot_id_from_flash_area_id(area->id));
 						shell_print(shell, "  version: %u.%u.%u+%u",
 							(unsigned int) hdr[i].h.v1.sem_ver.major,
 							(unsigned int) hdr[i].h.v1.sem_ver.minor,
@@ -132,14 +146,14 @@ static int cmd_mcuboot_erase(const struct shell *shell, size_t argc,
 			shell_error(shell, "Two images must be present to delete one");
 		}
 	} else {
-		id = strtoul(argv[1], NULL, 0);
+		id = flash_area_id_from_slot_id(strtoul(argv[1], NULL, 0));
 	}
 
 	if (id != UNFOUND_SLOT) 
 	{
 		err = boot_erase_img_bank(id);
 		if (err) {
-			shell_error(shell, "failed to erase bank %u", id);
+			shell_error(shell, "failed to erase slot %u", slot_id_from_flash_area_id(id));
 			return err;
 		}
 	}
@@ -160,7 +174,7 @@ static int cmd_mcuboot_confirm(const struct shell *shell, size_t argc,
 	return err;
 }
 
-#ifndef CONFIG_BOARD_SCORPIO
+#if !defined(CONFIG_BOARD_SCORPIO)
 /* Requesting upgrade is nosensical with equal slot, since 
  * the latest version is always chosen regardless of any flags.
  */
@@ -186,7 +200,7 @@ static int cmd_mcuboot_request_upgrade(const struct shell *shell, size_t argc,
 
 	return err;
 }
-#endif
+#endif // !defined(CONFIG_BOARD_SCORPIO)
 
 static int cmd_mcuboot_info_area(const struct shell *shell,
 				 const struct area_desc *area, int verbose)
@@ -202,8 +216,8 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
 
 	err = boot_read_swap_state_by_id(area->id, &swap_state);
 	if (err) {
-		shell_error(shell, "failed to read %s area (%u) %s: %d",
-			    area->name, area->id, "swap state", err);
+		shell_error(shell, "failed to read %s area (slot=%u) %s: %d",
+			    area->name, slot_id_from_flash_area_id(area->id), "swap state", err);
 		return err;
 	}
     if (!verbose)
@@ -211,7 +225,7 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
         if (swap_state.magic == BOOT_MAGIC_GOOD)
         {
             shell_print(shell, "Slot %u: %u.%u.%u+%u %s %s %s",
-                    area->id,
+                    slot_id_from_flash_area_id(area->id),
                     (unsigned int) hdr.h.v1.sem_ver.major,
                     (unsigned int) hdr.h.v1.sem_ver.minor,
                     (unsigned int) hdr.h.v1.sem_ver.revision,
@@ -224,11 +238,11 @@ static int cmd_mcuboot_info_area(const struct shell *shell,
         if (swap_state.copy_done == BOOT_FLAG_SET)
         {
             if (swap_state.image_ok == BOOT_FLAG_SET)
-                shell_error(shell, "Slot %u:  Booted/Confirmed", area->id);
+                shell_error(shell, "Slot %u:  Booted/Confirmed", slot_id_from_flash_area_id(area->id));
             else
-                shell_error(shell, "Slot %u:  Booted/Unconfirmed (WARNING: image may be removed on next boot unless confirmed)", area->id);
+                shell_error(shell, "Slot %u:  Booted/Unconfirmed (WARNING: image may be removed on next boot unless confirmed)", slot_id_from_flash_area_id(area->id));
         } else {
-            shell_print(shell, "Slot %u:  %s", area->id, swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
+            shell_print(shell, "Slot %u:  %s", slot_id_from_flash_area_id(area->id), swap_state.image_ok == BOOT_FLAG_SET ? "Confirmed" : "Unconfirmed");
         }
 
         shell_print(shell, "  Version: %u.%u.%u+%u",
@@ -276,7 +290,7 @@ static int cmd_mcuboot_info(const struct shell *shell, size_t argc,
 
 SHELL_STATIC_SUBCMD_SET_CREATE(mcuboot_cmds,
 	SHELL_CMD_ARG(confirm, NULL, "confirm", cmd_mcuboot_confirm, 1, 0),
-	SHELL_CMD_ARG(erase, NULL, "erase <area_id> | [unused] (erases non-boot image)", cmd_mcuboot_erase, 2, 0),
+	SHELL_CMD_ARG(erase, NULL, "erase <slot_id> | [unused] (erases non-boot image)", cmd_mcuboot_erase, 2, 0),
 	SHELL_CMD_ARG(info, NULL, "info <-v> verbose", cmd_mcuboot_info, 1, 1),
 #ifndef CONFIG_BOARD_SCORPIO
 	SHELL_CMD_ARG(request_upgrade, NULL, "request_upgrade [permanent]",
