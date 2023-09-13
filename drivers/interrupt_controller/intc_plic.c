@@ -145,8 +145,11 @@ static void plic_irq_handler(const void *arg)
 	/* Get the IRQ number generating the interrupt */
 	irq = regs->claim_complete;
 
-#if defined(CONFIG_RISCV_SUPERVISOR)
+	/* Ignore spurious interrupts on IRQ 0 */
 	if (irq == 0U)
+#if !defined(CONFIG_RISCV_SUPERVISOR)
+		return;
+#else
 		goto done;
 #endif
 
