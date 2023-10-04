@@ -109,7 +109,7 @@ enum dhcpv4_msg_type {
  * exponentially on each retransmit.
  * RFC2131 4.1
  */
-#define DHCPV4_INITIAL_RETRY_TIMEOUT 4
+#define DHCPV4_INITIAL_RETRY_TIMEOUT 1
 
 /* Initial minimum delay in INIT state before sending the
  * initial DISCOVER message. MAx value is defined with

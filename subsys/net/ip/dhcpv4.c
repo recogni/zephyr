@@ -307,7 +307,7 @@ static uint32_t dhcpv4_update_message_timeout(struct net_if_dhcpv4 *dhcpv4)
 {
 	uint32_t timeout;
 
-	timeout = DHCPV4_INITIAL_RETRY_TIMEOUT << dhcpv4->attempts;
+	timeout = DHCPV4_INITIAL_RETRY_TIMEOUT; // << dhcpv4->attempts;
 
 	/* Max 64 seconds, see RFC 2131 chapter 4.1 */
 	if (timeout < DHCPV4_INITIAL_RETRY_TIMEOUT || timeout > 64) {
@@ -315,7 +315,7 @@ static uint32_t dhcpv4_update_message_timeout(struct net_if_dhcpv4 *dhcpv4)
 	}
 
 	/* +1/-1 second randomization */
-	timeout += (sys_rand32_get() % 3U) - 1;
+	//timeout += (sys_rand32_get() % 3U) - 1;
 
 	dhcpv4->attempts++;
 	dhcpv4_set_timeout(dhcpv4, timeout);
