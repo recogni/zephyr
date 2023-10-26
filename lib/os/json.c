@@ -388,6 +388,33 @@ static int arr_next(struct json_obj *json, struct token *value)
 	return element_token(value->type);
 }
 
+static int skip_field(struct json_obj *obj, struct json_obj_key_value *kv)
+{
+	int field_count = 1;
+
+	if (kv->value.type == JSON_TOK_OBJECT_START ||
+	    kv->value.type == JSON_TOK_LIST_START) {
+		while (field_count > 0 && lexer_next(&obj->lexer, &kv->value)) {
+			switch (kv->value.type) {
+			case JSON_TOK_OBJECT_START:
+			case JSON_TOK_LIST_START:
+				field_count++;
+				break;
+			case JSON_TOK_OBJECT_END:
+			case JSON_TOK_LIST_END:
+				field_count--;
+				break;
+			case JSON_TOK_ERROR:
+				return -EINVAL;
+			default:
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int decode_num(const struct token *token, int32_t *num)
 {
 	/* FIXME: strtod() is not available in newlib/minimal libc,
@@ -584,6 +611,14 @@ static int obj_parse(struct json_obj *obj, const struct json_obj_descr *descr,
 
 			decoded_fields |= 1<<i;
 			break;
+		}
+
+		/* Skip field, if no descriptor was found */
+		if (i >= descr_len) {
+			ret = skip_field(obj, &kv);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 	}
 
