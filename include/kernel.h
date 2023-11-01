@@ -1638,6 +1638,11 @@ static inline uint32_t k_cycle_get_32(void)
 	return arch_k_cycle_get_32();
 }
 
+static inline uint64_t k_cycle_get_64(void)
+{
+	return arch_k_cycle_get_64();
+}
+
 /**
  * @}
  */

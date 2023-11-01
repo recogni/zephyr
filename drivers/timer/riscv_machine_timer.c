@@ -106,7 +106,6 @@ int sys_clock_driver_init(const struct device *dev)
 	return 0;
 }
 
-
 void sys_clock_set_timeout(int32_t ticks, bool idle)
 {
 	ARG_UNUSED(idle);
@@ -163,4 +162,9 @@ uint32_t sys_clock_elapsed(void)
 uint32_t sys_clock_cycle_get_32(void)
 {
 	return (uint32_t)mtime();
+}
+
+uint64_t sys_clock_cycle_get_64(void)
+{
+	return mtime();
 }
