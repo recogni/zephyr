@@ -317,6 +317,17 @@ void arch_mem_map(void *virt, uintptr_t phys, size_t size, uint32_t flags)
 {
 	uint32_t pte_flags = convert_flags(flags);
 
+	switch (flags & K_MEM_CACHE_MASK) {
+	case K_MEM_CACHE_NONE:
+	case K_MEM_CACHE_WT:
+		break;
+	case K_MEM_CACHE_WB:
+		phys ^= mmu_config.data_section_pa_mask;
+		break;
+	default:
+		__ASSERT(false, "bad memory mapping flags 0x%x", flags);
+	}
+
 	range_map_unlocked(virt, (uint64_t)phys, size, pte_flags);
 
 	invalidate_tlb_all();
